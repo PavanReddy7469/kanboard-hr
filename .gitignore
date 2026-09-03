@@ -1,0 +1,48 @@
+# ---------------------------------------------------------------
+# SUPERBEE PROJECTS & TASKS
+#
+# Rule of thumb: source and templates are tracked; anything holding
+# credentials, live data, or scratch output is not.
+# ---------------------------------------------------------------
+
+# Credentials -- config.php carries the database password in plain
+# text. config.default.php is tracked instead as the template.
+config.php
+config.php.sqlite-backup
+
+# Live data: the SQLite database, its WAL/SHM sidecars, uploaded
+# files, cache and every ad-hoc backup taken during development.
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Database dumps contain real rows, including bcrypt password
+# hashes for every user. Keep them off the repository.
+mysql/*.sql
+
+# Scratch and throwaway working directories.
+scratch/
+_to_delete/
+
+# Backups and archives left by editing sessions.
+*.bak
+*.bak-*
+*.backup
+*.backup-*
+*.tgz
+*.zip
+*.orig
+*.rej
+
+# One-off scripts written against live data.
+add_hr_tasks.php
+
+# Editor and OS noise.
+.vscode/
+.idea/
+*.swp
+*~
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -1,0 +1,615 @@
+/* SUPERBEE — brings Kanboard's own screens onto our design system.
+ *
+ * The dashboard, the my-tasks list and the calendar are stock Kanboard views.
+ * They work, so they are not rebuilt; this restyles them with the same tokens,
+ * typography and spacing as our grids so the app reads as one product rather
+ * than two glued together. Nothing here changes behaviour or markup.
+ */
+
+/* ---------- shared page furniture ---------- */
+
+.page-header h2,
+.page-header > h2 {
+    font-family: var(--sb-font);
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -.01em;
+    color: var(--sb-900);
+    margin: 0 0 14px;
+}
+
+.page-header ul {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 18px;
+    padding: 0;
+    list-style: none;
+    border-bottom: 1px solid var(--sb-200);
+    padding-bottom: 12px;
+}
+
+.page-header ul li { margin: 0; padding: 0; }
+
+.page-header ul li a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--sb-200);
+    border-radius: var(--sb-r-control);
+    background: var(--sb-white);
+    font-family: var(--sb-font);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--sb-700);
+    text-decoration: none;
+}
+
+.page-header ul li a:hover {
+    border-color: var(--sb-300);
+    color: var(--sb-navy);
+}
+
+/* ---------- filter / search box ---------- */
+
+.filter-box,
+.filter-box .search {
+    font-family: var(--sb-font);
+}
+
+.filter-box input[type="text"],
+.filter-box input[type="search"] {
+    height: var(--sb-control-h);
+    padding: 0 12px;
+    border: 1px solid var(--sb-200);
+    border-radius: var(--sb-r-control);
+    background: var(--sb-white);
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--sb-800);
+}
+
+/* ---------- the list panels used by the dashboard and my-tasks ---------- */
+
+.table-list {
+    font-family: var(--sb-font);
+    background: var(--sb-white);
+    border: 1px solid var(--sb-200);
+    border-radius: var(--sb-r-panel);
+    box-shadow: var(--sb-shadow-card);
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.table-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--sb-50);
+    border-bottom: 1px solid var(--sb-200);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--sb-500);
+}
+
+.table-list-header a { color: var(--sb-600); text-decoration: none; }
+.table-list-header a:hover { color: var(--sb-navy); }
+
+.table-list-row {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--sb-100);
+    border-left: 3px solid transparent;
+    background: var(--sb-white);
+    font-size: 13px;
+}
+
+.table-list-row:last-child { border-bottom: 0; }
+.table-list-row:hover { background: var(--sb-50); }
+
+.table-list-title a,
+.table-list-title > a {
+    font-weight: 600;
+    color: var(--sb-800);
+    text-decoration: none;
+}
+
+.table-list-title a:hover { color: var(--sb-navy); text-decoration: underline; }
+
+.table-list-details,
+.table-list-row .table-list-details {
+    margin-top: 4px;
+    font-size: 11.5px;
+    color: var(--sb-500);
+}
+
+.table-list-details a { color: var(--sb-500); text-decoration: none; }
+.table-list-details a:hover { color: var(--sb-navy); }
+
+/* the project > swimlane > column breadcrumb on each row */
+.table-list-row .dashboard-table-link,
+.table-list-row .task-board-collapsed { color: var(--sb-500); }
+
+/* ---------- Home ----------
+
+   Home lays its per-project task lists out as cards in the same two-column
+   grid the project dashboard uses, so the page reads as a set of evenly sized
+   panels instead of one long stack of headings and tables. The list inside a
+   card drops its own frame - the card already provides it. */
+
+.sb-home-grid { margin-top: 4px; }
+
+.sb-home-project { display: flex; flex-direction: column; }
+
+.sb-home-project .sb-card-head h3 { font-size: 13px; }
+
+.sb-home-project .sb-card-head h3 a {
+    color: var(--sb-900);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.sb-home-project .sb-card-head h3 a:hover { color: var(--sb-navy); text-decoration: underline; }
+
+/* the card is the frame; the list inside it is not */
+.sb-home-project .sb-card-body { padding: 0; }
+
+.sb-home-project .table-list {
+    margin-bottom: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.sb-home-project .table-list-header {
+    background: transparent;
+    border-bottom: 1px solid var(--sb-100);
+}
+
+.sb-home-project .pagination { padding: 8px 14px; border-top: 1px solid var(--sb-100); }
+
+/* ---------- calendar ---------- */
+
+#calendar,
+.fc {
+    font-family: var(--sb-font);
+    color: var(--sb-800);
+}
+
+.fc-toolbar.fc-header-toolbar {
+    margin-bottom: 14px;
+    padding: 0 0 12px;
+    border-bottom: 1px solid var(--sb-200);
+}
+
+.fc-toolbar h2,
+.fc-toolbar-title {
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -.01em;
+    color: var(--sb-900);
+}
+
+/* toolbar buttons: our control shape, not jQuery UI's */
+.fc button,
+.fc .fc-button,
+.fc-button-primary {
+    height: var(--sb-control-h);
+    padding: 0 14px;
+    border: 1px solid var(--sb-200) !important;
+    border-radius: var(--sb-r-control) !important;
+    background: var(--sb-white) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    font-family: var(--sb-font) !important;
+    font-size: 12.5px !important;
+    font-weight: 600 !important;
+    color: var(--sb-700) !important;
+    text-shadow: none !important;
+    text-transform: none;
+}
+
+.fc button:hover,
+.fc .fc-button:hover,
+.fc-button-primary:hover {
+    border-color: var(--sb-300) !important;
+    color: var(--sb-navy) !important;
+    background: var(--sb-50) !important;
+}
+
+.fc .fc-button-active,
+.fc .fc-state-active,
+.fc-button-primary:not(:disabled).fc-button-active {
+    background: var(--sb-navy) !important;
+    border-color: var(--sb-navy) !important;
+    color: var(--sb-white) !important;
+}
+
+.fc .fc-button:disabled,
+.fc .fc-state-disabled { opacity: .45 !important; }
+
+.fc .fc-button-group { gap: 4px; display: inline-flex; }
+
+/* grid */
+.fc th,
+.fc .fc-col-header-cell,
+.fc-day-header {
+    padding: 9px 6px !important;
+    background: var(--sb-50);
+    border-color: var(--sb-200) !important;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--sb-500);
+}
+
+.fc th a,
+.fc .fc-col-header-cell a { color: inherit; text-decoration: none; }
+
+.fc td,
+.fc .fc-daygrid-day,
+.fc-widget-content { border-color: var(--sb-100) !important; }
+
+.fc-view,
+.fc-view > table,
+.fc-scrollgrid {
+    border-color: var(--sb-200) !important;
+    border-radius: var(--sb-r-panel);
+    overflow: hidden;
+    background: var(--sb-white);
+}
+
+.fc .fc-day-number,
+.fc .fc-daygrid-day-number {
+    padding: 6px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--sb-600);
+    text-decoration: none;
+}
+
+.fc .fc-other-month .fc-day-number,
+.fc .fc-day-other .fc-daygrid-day-number { color: var(--sb-300); }
+
+.fc .fc-day-today,
+.fc .fc-today,
+.fc-state-highlight {
+    background: var(--sb-amber-tint) !important;
+    box-shadow: inset 0 2px 0 var(--sb-amber);
+}
+
+.fc .fc-day-today .fc-day-number,
+.fc .fc-day-today .fc-daygrid-day-number {
+    font-weight: 800;
+    color: var(--sb-navy);
+}
+
+.fc .fc-sat, .fc .fc-sun,
+.fc .fc-day-sat, .fc .fc-day-sun { background: var(--sb-50); }
+
+/* events */
+.fc-event,
+.fc .fc-daygrid-event {
+    padding: 2px 7px;
+    border: 0 !important;
+    border-left: 3px solid var(--sb-navy) !important;
+    border-radius: var(--sb-r-chip) !important;
+    background: var(--sb-wip-bg) !important;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--sb-wip-fg) !important;
+}
+
+.fc-event:hover { filter: brightness(.97); }
+.fc-event .fc-title, .fc-event .fc-event-title { color: inherit; }
+.fc-event .fc-time, .fc-event .fc-event-time { font-weight: 700; opacity: .8; }
+
+/* FullCalendar sizes its month grid to a fixed height and scrolls inside it,
+   which left a scrollbar mid-page and dead space underneath. Let it grow to
+   its content and let the page scroll instead. */
+.fc-scroller {
+    height: auto !important;
+    overflow: visible !important;
+}
+
+.fc-view-container,
+.fc-view-container .fc-view { overflow: visible !important; }
+
+/* FullCalendar stretches its month grid to fill the viewport and puts every
+   week row in "rigid" mode: a fixed height with overflow hidden, and the
+   content skeleton taken out of flow. On a wide screen that made empty weeks
+   render as huge near-blank boxes. Take the rows out of rigid mode so each one
+   sizes to its own content, with a floor so quiet weeks still read as day
+   cells rather than a cramped strip. */
+.fc .fc-scroller.fc-day-grid-container,
+.fc .fc-day-grid { height: auto !important; overflow: visible !important; }
+
+.fc .fc-row.fc-week { height: auto !important; overflow: visible; }
+
+.fc .fc-row.fc-rigid { overflow: visible; }
+.fc .fc-row.fc-rigid .fc-content-skeleton { position: relative; }
+
+.fc .fc-row.fc-week .fc-content-skeleton { min-height: 74px; padding-bottom: 4px; }
+
+/* the calendar sits in a card like everything else */
+.fc.js-calendar {
+    padding: 16px;
+    background: var(--sb-white);
+    border: 1px solid var(--sb-200);
+    border-radius: var(--sb-r-card);
+    box-shadow: var(--sb-shadow-card);
+}
+
+.fc-more,
+.fc-more-link {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--sb-500);
+    text-decoration: none;
+}
+
+.fc-more:hover, .fc-more-link:hover { color: var(--sb-navy); }
+
+/* ==========================================================================
+   SUPERBEE MODAL & FORM DESIGN SYSTEM
+   Replaces all generic open-source Kanban modal & form styling with cohesive,
+   premium SUPERBEE UI styling.
+   ========================================================================== */
+
+#modal-overlay {
+    background: rgba(15, 23, 42, 0.45) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+    z-index: 1000 !important;
+}
+
+#modal-box {
+    border-radius: 16px !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 20px 30px -5px rgba(15, 23, 42, 0.15), 0 10px 15px -5px rgba(15, 23, 42, 0.08) !important;
+    overflow: hidden !important;
+    font-family: var(--sb-font) !important;
+}
+
+#modal-box .page-header,
+#modal-header {
+    margin: 0 !important;
+    padding: 18px 24px !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    background: #f8fafc !important;
+}
+
+#modal-box .page-header h2,
+#modal-header h2 {
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    letter-spacing: -0.01em !important;
+}
+
+#modal-close-button {
+    font-size: 1.2rem !important;
+    color: #94a3b8 !important;
+    top: 18px !important;
+    right: 20px !important;
+    width: 28px !important;
+    height: 28px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 6px !important;
+    transition: all 0.2s !important;
+    text-decoration: none !important;
+}
+
+#modal-close-button:hover {
+    color: #0f172a !important;
+    background: #e2e8f0 !important;
+}
+
+#modal-content {
+    padding: 20px 24px !important;
+    color: #334155 !important;
+}
+
+/* Form controls & labels */
+form label,
+#modal-content label {
+    font-size: 0.85rem !important;
+    font-weight: 700 !important;
+    color: #334155 !important;
+    margin-bottom: 6px !important;
+    margin-top: 14px !important;
+    display: block !important;
+}
+
+form label:first-child,
+#modal-content label:first-child {
+    margin-top: 0 !important;
+}
+
+form input[type="text"],
+form input[type="number"],
+form input[type="password"],
+form input[type="email"],
+form input[type="date"],
+form select,
+form textarea,
+#modal-content input[type="text"],
+#modal-content input[type="number"],
+#modal-content input[type="password"],
+#modal-content input[type="email"],
+#modal-content select,
+#modal-content textarea {
+    width: 100% !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    padding: 9px 12px !important;
+    font-size: 0.88rem !important;
+    color: #0f172a !important;
+    background: #ffffff !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+}
+
+form input[type="text"]:focus,
+form input[type="number"]:focus,
+form select:focus,
+form textarea:focus,
+#modal-content input:focus,
+#modal-content select:focus,
+#modal-content textarea:focus {
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+}
+
+form input[type="checkbox"],
+#modal-content input[type="checkbox"] {
+    accent-color: #6366f1 !important;
+    width: 16px !important;
+    height: 16px !important;
+    cursor: pointer !important;
+    vertical-align: middle !important;
+    margin-right: 6px !important;
+}
+
+.form-help {
+    font-size: 0.78rem !important;
+    color: #64748b !important;
+    margin: 4px 0 12px !important;
+    line-height: 1.4 !important;
+}
+
+.form-actions {
+    margin-top: 24px !important;
+    padding-top: 16px !important;
+    border-top: 1px solid #f1f5f9 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+button[type="submit"],
+.btn-blue,
+.form-actions button[type="submit"] {
+    background: #4f46e5 !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 0.88rem !important;
+    padding: 9px 24px !important;
+    border-radius: 8px !important;
+    border: none !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3) !important;
+    transition: all 0.2s ease !important;
+    text-shadow: none !important;
+}
+
+button[type="submit"]:hover,
+.btn-blue:hover,
+.form-actions button[type="submit"]:hover {
+    background: #4338ca !important;
+    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4) !important;
+    transform: translateY(-1px) !important;
+}
+
+.form-actions a,
+.form-actions .btn-cancel {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    font-weight: 600 !important;
+    font-size: 0.88rem !important;
+    padding: 8px 18px !important;
+    border-radius: 8px !important;
+    text-decoration: none !important;
+    border: 1px solid #cbd5e1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    transition: all 0.2s !important;
+}
+
+.form-actions a:hover {
+    background: #e2e8f0 !important;
+    color: #1e293b !important;
+}
+
+.alert {
+    border-radius: 10px !important;
+    padding: 12px 16px !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+    margin: 14px 0 !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #f8fafc !important;
+    color: #334155 !important;
+}
+
+.alert-info {
+    background: #eff6ff !important;
+    border-color: #bfdbfe !important;
+    color: #1e40af !important;
+}
+
+
+/* ---------- hover and focus effects ----------
+
+   These were written as inline onmouseover/onmouseout/onfocus/onblur
+   attributes, which the app's Content-Security-Policy blocks outright: the
+   browser never compiles an inline handler, so every one of them was dead and
+   the rows and cards had no hover state at all. They are pure presentation, so
+   they belong in CSS anyway - where no policy can switch them off. */
+
+.sb-hover-row { transition: background .15s ease; }
+.sb-hover-row:hover { background: #fbfcfe; }
+
+.sb-hover-card { transition: box-shadow .15s ease, border-color .15s ease; }
+.sb-hover-card:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .06);
+    border-color: #cbd5e1;
+}
+
+/* the calendar's search box widens while it has focus, and stays wide only
+   while it still holds a value */
+.sb-grow-input { transition: width .18s ease, border-color .18s ease; }
+.sb-grow-input:focus { width: 210px !important; border-color: #6366f1 !important; }
+.sb-grow-input:not(:placeholder-shown) { width: 210px !important; }
+
+/* the search box: the focus ring was two inline onfocusin/onfocusout
+   attributes, dead under CSP. :focus-within does it properly. */
+.sb-search-shell {
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 6px 14px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, .02);
+    transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.sb-search-shell:focus-within {
+    border-color: #6366f1;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, .1);
+}
+
+html body input.sb-search-input {
+    border: 0 !important;
+    outline: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    width: 100%;
+    font-size: 1rem;
+    color: #0f172a;
+    padding: 8px 0;
+    margin: 0;
+}

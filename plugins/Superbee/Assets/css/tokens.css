@@ -1,0 +1,64 @@
+/* SUPERBEE design tokens — see the approved design foundations artboard.
+   Brand values are sampled from assets/img/superbee_logo.png.
+   The slate ramp, status and priority values are the ones already shipping
+   in plugins/TaskManager/Assets/css/taskmanager.css. */
+
+/* Plus Jakarta Sans, served from this plugin rather than Google Fonts.
+   The CDN copy never actually loaded: Kanboard's Content-Security-Policy
+   blocks third-party stylesheets, and an internal tool should not depend on
+   an outside network for its own typeface anyway. SIL Open Font License;
+   the licence text ships beside the files. 64KB for five weights. */
+@font-face { font-family: 'Plus Jakarta Sans'; font-style: normal; font-weight: 400; font-display: swap; src: url('../fonts/plus-jakarta-sans-400.woff2') format('woff2'); }
+@font-face { font-family: 'Plus Jakarta Sans'; font-style: normal; font-weight: 500; font-display: swap; src: url('../fonts/plus-jakarta-sans-500.woff2') format('woff2'); }
+@font-face { font-family: 'Plus Jakarta Sans'; font-style: normal; font-weight: 600; font-display: swap; src: url('../fonts/plus-jakarta-sans-600.woff2') format('woff2'); }
+@font-face { font-family: 'Plus Jakarta Sans'; font-style: normal; font-weight: 700; font-display: swap; src: url('../fonts/plus-jakarta-sans-700.woff2') format('woff2'); }
+@font-face { font-family: 'Plus Jakarta Sans'; font-style: normal; font-weight: 800; font-display: swap; src: url('../fonts/plus-jakarta-sans-800.woff2') format('woff2'); }
+
+:root {
+    /* Brand */
+    --sb-navy:        #1d153d;
+    --sb-navy-700:    #2c2159;
+    --sb-navy-900:    #140e2b;
+    --sb-navy-ink:    #b9b3cd;
+    --sb-navy-mute:   #8b83ad;
+    --sb-navy-label:  #6f6795;
+    --sb-navy-pill:   #372a6b;
+    --sb-amber:       #ffbf01;
+    --sb-amber-tint:  #fffdf5;
+
+    /* Neutrals */
+    --sb-white:   #ffffff;
+    --sb-50:      #f8fafc;
+    --sb-100:     #f1f5f9;
+    --sb-200:     #e2e8f0;
+    --sb-300:     #cbd5e1;
+    --sb-400:     #94a3b8;
+    --sb-500:     #64748b;
+    --sb-600:     #475569;
+    --sb-700:     #334155;
+    --sb-800:     #1e293b;
+    --sb-900:     #0f172a;
+
+    /* Status */
+    --sb-open-bg:     #f1f5f9;  --sb-open-fg:   #475569;  --sb-open-br:   #cbd5e1;
+    --sb-wip-bg:      #e0f2fe;  --sb-wip-fg:    #0369a1;  --sb-wip-br:    #bae6fd;
+    --sb-rev-bg:      #fef3c7;  --sb-rev-fg:    #b45309;  --sb-rev-br:    #fde68a;
+    --sb-closed-bg:   #dcfce7;  --sb-closed-fg: #15803d;  --sb-closed-br: #86efac;
+
+    /* Shape */
+    --sb-r-card:    14px;
+    --sb-r-panel:   12px;
+    --sb-r-control:  8px;
+    --sb-r-chip:     6px;
+    --sb-r-pill:    20px;
+
+    --sb-shadow-card: 0 1px 2px rgba(15, 23, 42, .04);
+    --sb-shadow-pop:  0 10px 30px -5px rgba(15, 23, 42, .08), 0 0 1px 1px rgba(15, 23, 42, .05);
+
+    /* Shell metrics */
+    --sb-rail-w:     232px;
+    --sb-topbar-h:    60px;
+    --sb-control-h:   36px;
+
+    --sb-font: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
