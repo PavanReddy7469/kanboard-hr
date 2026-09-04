@@ -46,3 +46,7 @@ add_hr_tasks.php
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Files delivered into the workspace by tooling; the CSS here was
+# merged into plugins/Superbee/Assets/css/kanboard-sync.css.
+Claude outputs/
