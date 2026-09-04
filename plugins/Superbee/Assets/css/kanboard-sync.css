@@ -613,3 +613,263 @@ html body input.sb-search-input {
     padding: 8px 0;
     margin: 0;
 }
+
+/* =================================================================
+   Stock Kanboard pages
+   -----------------------------------------------------------------
+   342 core templates ship with Kanboard; 63 have SUPERBEE overrides.
+   The rest -- user administration, settings, group management and so
+   on -- still render Kanboard's own markup, which is why the shell
+   looks like SUPERBEE right up until the page body starts.
+
+   Rewriting 280 templates is not the answer. Kanboard reuses a small,
+   fixed set of classes on every one of those pages, so restyling that
+   set here brings all of them into the design system at once.
+   ================================================================= */
+
+/* --- the two-column frame: nav rail on the left, content right --- */
+
+.sidebar-container {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.sidebar-container .sidebar {
+    flex: 0 0 232px;
+    background: var(--sb-white);
+    border: 1px solid var(--sb-200);
+    border-radius: var(--sb-r-card);
+    box-shadow: var(--sb-shadow-card);
+    padding: 10px;
+    position: sticky;
+    top: calc(var(--sb-topbar-h) + 12px);
+}
+
+.sidebar-container .sidebar-content {
+    flex: 1 1 auto;
+    min-width: 0;      /* let wide tables scroll instead of pushing the rail */
+}
+
+/* Section captions ("Information", "Actions") read as labels, not
+   headings -- they are signposts inside a rail, not page titles. */
+.sidebar h2,
+.sidebar-title {
+    font-family: var(--sb-font);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sb-500);
+    margin: 10px 0 6px;
+    padding: 0 10px;
+}
+
+.sidebar ul {
+    list-style: none;
+    margin: 0 0 6px;
+    padding: 0;
+}
+
+.sidebar ul li {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.sidebar ul li a {
+    display: block;
+    padding: 8px 10px;
+    border-radius: var(--sb-r-control);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--sb-700);
+    text-decoration: none;
+    transition: background 120ms ease, color 120ms ease;
+}
+
+.sidebar ul li a:hover {
+    background: var(--sb-100);
+    color: var(--sb-900);
+}
+
+.sidebar ul li.active > a,
+.sidebar ul li a.active {
+    background: var(--sb-navy-pill);
+    color: var(--sb-white);
+    font-weight: 600;
+}
+
+/* --- content panels ------------------------------------------- */
+
+.sidebar-content .panel,
+.page-container .panel,
+#main .panel {
+    background: var(--sb-white);
+    border: 1px solid var(--sb-200);
+    border-left: 1px solid var(--sb-200);   /* core sets a thick accent bar */
+    border-radius: var(--sb-r-card);
+    box-shadow: var(--sb-shadow-card);
+    padding: 16px 18px;
+    margin: 0 0 16px;
+}
+
+/* Kanboard renders these panels as bulleted lists of label/value
+   pairs. Rows, not bullets. */
+#main ul.panel,
+.sidebar-content ul.panel,
+#main .panel > ul,
+.sidebar-content .panel > ul {
+    list-style: none;
+    margin: 0 0 16px;
+    padding-left: 18px;
+}
+
+#main ul.panel > li,
+.sidebar-content ul.panel > li,
+#main .panel > ul > li,
+.sidebar-content .panel > ul > li {
+    list-style: none;
+    list-style: none;
+    margin: 0;
+    padding: 8px 0;
+    font-size: 0.875rem;
+    color: var(--sb-700);
+    border-bottom: 1px solid var(--sb-100);
+}
+
+#main ul.panel > li:last-child,
+.sidebar-content ul.panel > li:last-child,
+#main .panel > ul > li:last-child,
+.sidebar-content .panel > ul > li:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+#main ul.panel > li strong,
+.sidebar-content ul.panel > li strong,
+#main .panel > ul > li strong,
+.sidebar-content .panel > ul > li strong {
+    color: var(--sb-900);
+    font-weight: 600;
+}
+
+/* Section headings above panels ("Summary", "Security"). */
+.sidebar-content h3,
+#main > h3,
+.page-container h3 {
+    font-family: var(--sb-font);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--sb-900);
+    letter-spacing: -0.01em;
+    margin: 20px 0 10px;
+}
+
+.sidebar-content h3:first-child {
+    margin-top: 0;
+}
+
+/* --- listing tables on stock pages ---------------------------- */
+
+#main table.table-fixed,
+#main table.table-striped,
+.sidebar-content table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--sb-white);
+    border: 1px solid var(--sb-200);
+    border-radius: var(--sb-r-card);
+    overflow: hidden;
+    font-size: 0.875rem;
+}
+
+#main table th,
+.sidebar-content table th {
+    background: var(--sb-50);
+    color: var(--sb-500);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--sb-200);
+}
+
+#main table td,
+.sidebar-content table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--sb-100);
+    color: var(--sb-700);
+    vertical-align: middle;
+}
+
+#main table tr:last-child td,
+.sidebar-content table tr:last-child td {
+    border-bottom: 0;
+}
+
+#main table tbody tr:hover td {
+    background: var(--sb-50);
+}
+
+/* --- forms on stock pages ------------------------------------- */
+
+.sidebar-content form label,
+#main form label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--sb-700);
+    margin: 12px 0 4px;
+}
+
+.sidebar-content form input[type="text"],
+.sidebar-content form input[type="email"],
+.sidebar-content form input[type="password"],
+.sidebar-content form input[type="number"],
+.sidebar-content form select,
+.sidebar-content form textarea,
+#main form input[type="text"],
+#main form input[type="email"],
+#main form input[type="password"],
+#main form select,
+#main form textarea {
+    width: 100%;
+    max-width: 460px;
+    min-height: var(--sb-control-h);
+    padding: 8px 11px;
+    font-family: var(--sb-font);
+    font-size: 0.875rem;
+    color: var(--sb-900);
+    background: var(--sb-white);
+    border: 1px solid var(--sb-300);
+    border-radius: var(--sb-r-control);
+    box-shadow: none;
+}
+
+.sidebar-content form input:focus,
+.sidebar-content form select:focus,
+.sidebar-content form textarea:focus,
+#main form input:focus,
+#main form select:focus,
+#main form textarea:focus {
+    outline: none;
+    border-color: var(--sb-navy);
+    box-shadow: 0 0 0 3px var(--sb-navy-pill);
+}
+
+/* --- narrow screens ------------------------------------------- */
+
+@media (max-width: 900px) {
+    .sidebar-container {
+        display: block;
+    }
+
+    .sidebar-container .sidebar {
+        position: static;
+        margin-bottom: 16px;
+    }
+}
