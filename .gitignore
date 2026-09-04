@@ -50,3 +50,7 @@ desktop.ini
 # Files delivered into the workspace by tooling; the CSS here was
 # merged into plugins/Superbee/Assets/css/kanboard-sync.css.
 Claude outputs/
+
+# Stale SQLite backups pulled out of data/. Move these off the machine;
+# each is a full copy of the old database, password hashes included.
+_archive-sqlite-backups/

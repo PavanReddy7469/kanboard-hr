@@ -22,19 +22,19 @@ class Plugin extends Base
         $this->helper->register('deliverable', '\Kanboard\Plugin\TaskManager\Helper\DeliverableHelper');
 
         // Assets
-        $this->hook->on('template:layout:css', array('template' => 'plugins/TaskManager/Assets/css/taskmanager.css'));
-        $this->hook->on('template:layout:css', array('template' => 'plugins/TaskManager/Assets/css/dashboard.css'));
-        $this->hook->on('template:layout:css', array('template' => 'plugins/TaskManager/Assets/css/grid.css'));
-        $this->hook->on('template:layout:js', array('template' => 'plugins/TaskManager/Assets/js/taskmanager.js'));
-        $this->hook->on('template:layout:js', array('template' => 'plugins/TaskManager/Assets/js/grid.js'));
+        $this->hook->on('template:layout:css', array('template' => 'plugins/TaskManager/Assets/css/bundle.css'));
+        
+        
+        $this->hook->on('template:layout:js', array('template' => 'plugins/TaskManager/Assets/js/bundle.js'));
+        
         // Both only reshape a rendered Gantt chart; on every other page they
         // find nothing to do and are pure download weight.
         if ($this->isGanttPage()) {
             $this->hook->on('template:layout:js', array('template' => 'plugins/TaskManager/Assets/js/dependencies-gantt.js'));
             $this->hook->on('template:layout:js', array('template' => 'plugins/TaskManager/Assets/js/gantt-zoho.js'));
         }
-        $this->hook->on('template:layout:js', array('template' => 'plugins/TaskManager/Assets/js/task-panel.js'));
-        $this->hook->on('template:layout:js', array('template' => 'plugins/TaskManager/Assets/js/status-select.js'));
+        
+        
 
         // The Zoho-shaped project tab strip: five tabs plus an overflow.
         // Overriding the core template rather than appending to it, so the

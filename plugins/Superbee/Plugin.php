@@ -27,9 +27,11 @@ class Plugin extends Base
         $this->template->setTemplateOverride('dashboard/overview', 'Superbee:dashboard_overview');
         $this->template->setTemplateOverride('dashboard/tasks', 'Superbee:dashboard_tasks');
 
-        $this->hook->on('template:layout:css', array('template' => 'plugins/Superbee/Assets/css/tokens.css'));
-        $this->hook->on('template:layout:css', array('template' => 'plugins/Superbee/Assets/css/shell.css'));
-        $this->hook->on('template:layout:css', array('template' => 'plugins/Superbee/Assets/css/kanboard-sync.css'));
+        // One request instead of three. Sources live beside this bundle;
+        // regenerate with: php build-assets.php
+        $this->hook->on('template:layout:css', array('template' => 'plugins/Superbee/Assets/css/bundle.css'));
+        
+        
 
         // Inline handlers are dead under the app's CSP; shell behaviour binds here.
         $this->hook->on('template:layout:js', array('template' => 'plugins/Superbee/Assets/js/shell.js'));
