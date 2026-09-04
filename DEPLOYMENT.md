@@ -119,10 +119,11 @@ Restrict it to the app pool identity and administrators. Nobody else.
 
 ## 7. Open risks, not deployment steps
 
-- **Role denial is unverified.** The code refuses approval to anyone who is
-  not an app admin or that project's manager, and checks the deliverable
-  belongs to the project. But no one has ever logged in as a non-admin and
-  confirmed it. Do this before real users arrive.
+- ~~Role denial is unverified.~~ **Verified.** Logged in as a Role: User
+  account and issued approve, reject, close-task, user-administration and
+  settings requests, each carrying a valid CSRF token from that user's own
+  session. All five returned **HTTP 403**, and no data changed. The refusal
+  is the server-side role check, not the token check.
 - **`isAdmin()` covers both Administrator *and* Manager**, so an app-manager
   can approve reports on any project, including ones they are not a member
   of. Decide whether that is intended.
@@ -138,5 +139,4 @@ Restrict it to the app pool identity and administrators. Nobody else.
 2. Set up backups, and test a restore
 3. Stand up IIS (or Nginx), move the app out of the user profile
 4. TLS + HTTP→HTTPS redirect
-5. Verify role denial with a real non-admin login
-6. Move the stale backups off the machine
+5. Move the stale backups off the machine
