@@ -39,6 +39,21 @@ class SubtaskHelper extends \Kanboard\Helper\SubtaskHelper
      * @param  array $attributes
      * @return string
      */
+    /**
+     * Start date, so a subtask reads the same way a task does.
+     *
+     * @param  array $values
+     * @param  array $errors
+     * @param  array $attributes
+     * @return string
+     */
+    public function renderStartDateField(array $values, array $errors = array(), array $attributes = array())
+    {
+        $attributes = array_merge(array('tabindex="4"'), $attributes);
+
+        return $this->helper->form->date(t('Start date'), 'date_started', $values, $errors, $attributes);
+    }
+
     public function renderDueDateField(array $values, array $errors = array(), array $attributes = array())
     {
         $attributes = array_merge(array('tabindex="4"'), $attributes);

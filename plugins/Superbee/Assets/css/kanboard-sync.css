@@ -959,3 +959,98 @@ input.sb-inline-input:focus {
 .sb-backdating-notice .fa {
     color: #dc2626;
 }
+
+/* --- search results ------------------------------------------------
+   Same columns and language as the task grid: arriving here from a
+   search should feel like the same application. */
+
+.sb-results {
+    background: var(--sb-white);
+    border: 1px solid var(--sb-200);
+    border-radius: var(--sb-r-card);
+    overflow: hidden;
+}
+
+.sb-results-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--sb-50);
+    border-bottom: 1px solid var(--sb-200);
+}
+
+.sb-results-count {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--sb-500);
+}
+
+.sb-result {
+    display: grid;
+    grid-template-columns: 62px minmax(0, 1fr) 170px 150px 120px 46px;
+    align-items: center;
+    gap: 14px;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--sb-100);
+    text-decoration: none;
+    color: inherit;
+    transition: background 110ms ease;
+}
+
+.sb-result:last-child { border-bottom: 0; }
+.sb-result:hover      { background: var(--sb-50); }
+.sb-result.is-closed  { opacity: 0.62; }
+
+.sb-result-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--sb-600);
+    background: var(--sb-100);
+    border-radius: 5px;
+    padding: 3px 6px;
+    text-align: center;
+}
+
+.sb-result-main  { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.sb-result-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--sb-900);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sb-result-project {
+    font-size: 0.75rem;
+    color: var(--sb-500);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sb-result-owner,
+.sb-result-dates {
+    font-size: 0.8125rem;
+    color: var(--sb-700);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sb-result-dates .is-late { color: #dc2626; font-weight: 600; }
+.sb-result-muted          { color: var(--sb-400); }
+
+@media (max-width: 900px) {
+    .sb-result {
+        grid-template-columns: 54px minmax(0, 1fr) auto;
+        row-gap: 6px;
+    }
+    .sb-result-owner,
+    .sb-result-dates { grid-column: 2 / -1; }
+}

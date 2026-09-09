@@ -135,7 +135,23 @@ $sortLink = function ($column, $label) use ($base, $order, $direction) {
 
                     <?php foreach ($groupRows as $row): ?>
                         <tr class="<?= $row['is_overdue'] ? 'is-overdue' : '' ?> <?= $row['is_active'] ? '' : 'is-closed' ?>">
-                            <td class="zg-col-code"><span class="zg-code"><?= $this->text->e($row['code']) ?></span></td>
+                            <td class="zg-col-code">
+                                <?php if (! empty($row['subtasks'])): ?>
+                                    <?php /* The id doubles as the disclosure control: click it to
+                                             unfold this task's subtasks beneath it. */ ?>
+                                    <button type="button"
+                                            class="zg-code is-expandable"
+                                            data-zg-subtree="<?= (int) $row['id'] ?>"
+                                            aria-expanded="false"
+                                            title="<?= t('Show subtasks') ?>">
+                                        <i class="fa fa-caret-right zg-caret" aria-hidden="true"></i>
+                                        <?= $this->text->e($row['code']) ?>
+                                        <span class="zg-subcount"><?= count($row['subtasks']) ?></span>
+                                    </button>
+                                <?php else: ?>
+                                    <span class="zg-code"><?= $this->text->e($row['code']) ?></span>
+                                <?php endif ?>
+                            </td>
                             <td class="zg-col-title">
                                 <a href="<?= $this->url->href('TaskViewController', 'show', array('task_id' => $row['id'], 'project_id' => $project['id'])) ?>"
                                    data-zp-open="<?= $this->url->href('TaskPanelController', 'show', array('plugin' => 'TaskManager', 'task_id' => $row['id'], 'project_id' => $project['id'])) ?>">
@@ -186,6 +202,50 @@ $sortLink = function ($column, $label) use ($base, $order, $direction) {
                                 </span>
                             </td>
                         </tr>
+
+                        <?php /* Subtask rows: same table, so the columns stay in
+                                 line with the task above. Hidden until the id is
+                                 clicked. */ ?>
+                        <?php foreach ($row['subtasks'] as $subIndex => $sub): ?>
+                            <tr class="zg-subrow" data-zg-subtree-of="<?= (int) $row['id'] ?>" hidden>
+                                <td class="zg-col-code">
+                                    <span class="zg-subbranch <?= $subIndex === count($row['subtasks']) - 1 ? 'is-last' : '' ?>" aria-hidden="true"></span>
+                                </td>
+                                <td class="zg-col-title">
+                                    <span class="zg-subtitle"><?= $this->text->e($sub['title']) ?></span>
+                                </td>
+                                <td class="zg-col-owner">
+                                    <?php if ($sub['owner'] !== ''): ?>
+                                        <span class="zg-owner"><?= $this->text->e($sub['owner']) ?></span>
+                                    <?php else: ?>
+                                        <span class="zg-muted"><?= t('Unassigned') ?></span>
+                                    <?php endif ?>
+                                </td>
+                                <td class="zg-col-status">
+                                    <?= $this->render('TaskManager:grid/status_select', array(
+                                        'options'        => $subtask_statuses,
+                                        'option_classes' => $subtask_status_classes,
+                                        'current'        => $sub['status'],
+                                        'current_label'  => $sub['status_label'],
+                                        'current_class'  => $sub['status_class'],
+                                        'editable'       => $can_move,
+                                        'url_template'   => $this->url->href('StatusChangeController', 'subtask', array('plugin' => 'TaskManager', 'project_id' => $project['id'], 'task_id' => $row['id'], 'subtask_id' => $sub['id'])).'&status=%s&csrf_token=%s',
+                                    )) ?>
+                                </td>
+                                <td class="zg-col-tags"><span class="zg-muted">&mdash;</span></td>
+                                <td class="zg-col-date"><span class="zg-muted">&mdash;</span></td>
+                                <td class="zg-col-date"><span class="zg-muted">&mdash;</span></td>
+                                <td class="zg-col-duration">
+                                    <?php if ($sub['time_estimated'] > 0): ?>
+                                        <?= t('%sh', $sub['time_estimated']) ?>
+                                    <?php else: ?>
+                                        <span class="zg-muted">&mdash;</span>
+                                    <?php endif ?>
+                                </td>
+                                <td class="zg-col-priority"><span class="zg-muted">&mdash;</span></td>
+                                <td class="zg-col-progress"><span class="zg-muted">&mdash;</span></td>
+                            </tr>
+                        <?php endforeach ?>
                     <?php endforeach ?>
                 </tbody>
             <?php endforeach ?>

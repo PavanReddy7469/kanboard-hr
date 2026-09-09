@@ -71,9 +71,12 @@ $row = function ($label, $value, $hint = '') {
         </div>
 
         <dl class="zp-info">
-            <dt><?= t('Associated Team') ?></dt>
-            <dd><?= $task['swimlane_name'] !== '' ? $this->text->e($task['swimlane_name']) : '<span class="zp-muted">&mdash;</span>' ?></dd>
-
+            <?php /* The swimlane row used to sit here, labelled "Associated
+                     Team". Every project has exactly one - the default - so it
+                     only ever read "Default swimlane", which told the reader
+                     nothing. The swimlane itself stays: tasks.swimlane_id is
+                     NOT NULL with a cascading foreign key, and the Kanban board
+                     is rendered from it. It is simply not shown. */ ?>
             <dt><?= t('Owner') ?></dt>
             <dd>
                 <?php if (! empty($task['assignee_username'])): ?>

@@ -363,6 +363,7 @@ class GridModel extends Base
         $project  = $this->projectModel->getById($projectId);
         $progress = $this->getSubtaskProgress($projectId);
         $tags     = $this->getTagsByTask($projectId);
+        $subtasks = $this->getSubtasksByTask($projectId);
         $rows     = array();
 
         foreach ($tasks as $task) {
@@ -386,10 +387,62 @@ class GridModel extends Base
                 'progress'   => isset($progress[$id]) ? $progress[$id] : 0,
                 'color_id'   => $task['color_id'],
                 'is_overdue' => ! empty($task['date_due']) && $task['is_active'] == 1 && $task['date_due'] < (int) strtotime('today'),
+                'subtasks'   => isset($subtasks[$id]) ? $subtasks[$id] : array(),
             );
         }
 
         return $this->sortRows($rows, $order, $direction);
+    }
+
+    /**
+     * Every subtask in the project, grouped by task.
+     *
+     * One query for the whole grid rather than one per row: the grid renders
+     * up to a page of tasks, and a query each would be a page of round trips
+     * for something almost always small.
+     *
+     * @param  integer $projectId
+     * @return array   task_id => list of subtasks
+     */
+    protected function getSubtasksByTask($projectId)
+    {
+        $rows = $this->db->table(SubtaskModel::TABLE)
+            ->columns(
+                SubtaskModel::TABLE.'.id',
+                SubtaskModel::TABLE.'.title',
+                SubtaskModel::TABLE.'.status',
+                SubtaskModel::TABLE.'.task_id',
+                SubtaskModel::TABLE.'.user_id',
+                SubtaskModel::TABLE.'.time_estimated',
+                SubtaskModel::TABLE.'.time_spent',
+                SubtaskModel::TABLE.'.position'
+            )
+            ->join(TaskModel::TABLE, 'id', 'task_id')
+            ->eq(TaskModel::TABLE.'.project_id', $projectId)
+            ->asc(SubtaskModel::TABLE.'.position')
+            ->findAll();
+
+        $users    = $this->userModel->getActiveUsersList();
+        $statuses = $this->subtaskModel->getStatusList();
+        $grouped  = array();
+
+        foreach ($rows as $row) {
+            $taskId = (int) $row['task_id'];
+
+            $grouped[$taskId][] = array(
+                'id'           => (int) $row['id'],
+                'title'        => $row['title'],
+                'status'       => (int) $row['status'],
+                'status_label' => isset($statuses[$row['status']]) ? $statuses[$row['status']] : '',
+                'status_class' => $this->helper->taskTree->getSubtaskStatusClass($row['status']),
+                'owner'        => isset($users[$row['user_id']]) ? $users[$row['user_id']] : '',
+                'owner_id'     => (int) $row['user_id'],
+                'time_estimated' => (float) $row['time_estimated'],
+                'time_spent'     => (float) $row['time_spent'],
+            );
+        }
+
+        return $grouped;
     }
 
     /**

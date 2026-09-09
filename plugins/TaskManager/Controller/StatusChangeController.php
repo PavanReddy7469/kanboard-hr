@@ -59,6 +59,54 @@ class StatusChangeController extends BaseController
     }
 
     /**
+     * Change a subtask's status from the grid.
+     *
+     * Subtasks carry Kanboard's own three states - Todo, In progress, Done -
+     * rather than the project's columns. Columns belong to the board, and a
+     * subtask never sits on one. The control is the same pill used for tasks,
+     * so the two read alike even though what they set is different.
+     */
+    public function subtask()
+    {
+        $task = $this->getTask();
+        $this->checkReusableGETCSRFParam();
+
+        $subtaskId = $this->request->getIntegerParam('subtask_id');
+        $status    = $this->request->getIntegerParam('status', -1);
+        $subtask   = $this->subtaskModel->getById($subtaskId);
+
+        if (empty($subtask) || (int) $subtask['task_id'] !== (int) $task['id']) {
+            throw new AccessForbiddenException(t('That subtask does not belong to this task.'));
+        }
+
+        $statuses = $this->subtaskModel->getStatusList();
+
+        if (! isset($statuses[$status])) {
+            throw new AccessForbiddenException(t('Unknown status.'));
+        }
+
+        if (! $this->helper->projectRole->canUpdateTask($task)) {
+            throw new AccessForbiddenException(t("You don't have the permission to change this subtask"));
+        }
+
+        $saved = $this->subtaskModel->update(array(
+            'id'     => $subtaskId,
+            'status' => $status,
+        ));
+
+        if (! $saved) {
+            $this->response->status(400);
+            return;
+        }
+
+        $this->response->json(array(
+            'ok'    => true,
+            'label' => $statuses[$status],
+            'class' => $this->helper->taskTree->getSubtaskStatusClass($status),
+        ));
+    }
+
+    /**
      * Archive or reactivate a project.
      */
     public function project()

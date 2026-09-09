@@ -276,6 +276,28 @@ class TaskTreeHelper extends Base
      * @param  string $columnTitle
      * @return string
      */
+    /**
+     * The pill colour for a subtask's status.
+     *
+     * Subtasks use Kanboard's own three states rather than project columns,
+     * so they map straight onto the same visual language the task pills use:
+     * open, work in progress, done.
+     *
+     * @param  integer $status
+     * @return string
+     */
+    public function getSubtaskStatusClass($status)
+    {
+        switch ((int) $status) {
+            case \Kanboard\Model\SubtaskModel::STATUS_DONE:
+                return 'status-closed';
+            case \Kanboard\Model\SubtaskModel::STATUS_INPROGRESS:
+                return 'status-wip';
+            default:
+                return 'status-open';
+        }
+    }
+
     public function getStatusClass($columnTitle)
     {
         $title = strtolower(trim($columnTitle));

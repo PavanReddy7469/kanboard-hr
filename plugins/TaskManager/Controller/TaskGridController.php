@@ -71,6 +71,15 @@ class TaskGridController extends BaseController
 
         list($params['columns'], $params['column_classes']) = $this->gridModel->getStatusOptions($project['id']);
 
+        /* Subtasks use Kanboard's three states rather than the project's
+           columns, so the pill in a subtask row is fed from this list. */
+        $params['subtask_statuses'] = $this->subtaskModel->getStatusList();
+        $params['subtask_status_classes'] = array();
+
+        foreach (array_keys($params['subtask_statuses']) as $subtaskStatus) {
+            $params['subtask_status_classes'][$subtaskStatus] = $this->helper->taskTree->getSubtaskStatusClass($subtaskStatus);
+        }
+
         if ($mode === GridModel::MODE_GANTT) {
             $params += $this->getGanttParams($project, $view);
         } elseif ($mode === GridModel::MODE_KANBAN) {

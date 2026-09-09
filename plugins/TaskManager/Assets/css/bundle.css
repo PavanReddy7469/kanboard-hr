@@ -2455,3 +2455,90 @@ html body a.sb-deliv-act.is-reject:hover  { background: #ffe4e6; border-color: #
     border-color: var(--sb-300);
     color: var(--sb-navy);
 }
+
+/* --- subtask tree in the task grid ---------------------------------
+   The id doubles as the disclosure control; subtasks are rows in the
+   same table so their columns stay aligned with the task above. */
+
+.zg-code.is-expandable {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: 0;
+    padding: 2px 6px 2px 2px;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.zg-code.is-expandable:hover {
+    background: var(--sb-100);
+}
+
+.zg-caret {
+    font-size: 0.75rem;
+    color: var(--sb-500);
+    transition: transform 140ms ease;
+}
+
+.zg-code.is-open .zg-caret {
+    transform: rotate(90deg);
+}
+
+.zg-subcount {
+    min-width: 17px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--sb-200);
+    color: var(--sb-700);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 17px;
+    text-align: center;
+}
+
+.zg-subrow > td {
+    background: var(--sb-50);
+}
+
+.zg-subrow:hover > td {
+    background: var(--sb-100);
+}
+
+/* the elbow that ties a subtask back to its parent row */
+.zg-subbranch {
+    display: inline-block;
+    position: relative;
+    width: 26px;
+    height: 20px;
+    margin-left: 10px;
+}
+
+.zg-subbranch::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: -12px;
+    bottom: 10px;
+    border-left: 1.5px solid var(--sb-300);
+}
+
+.zg-subbranch.is-last::before {
+    bottom: 10px;
+}
+
+.zg-subbranch::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 14px;
+    border-top: 1.5px solid var(--sb-300);
+}
+
+.zg-subtitle {
+    color: var(--sb-700);
+    font-size: 0.8125rem;
+}

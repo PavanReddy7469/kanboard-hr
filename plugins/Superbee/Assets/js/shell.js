@@ -249,4 +249,73 @@
         }
     });
 
+    /* ------------------------------------------------------------------
+       Subtask tree in the task grid.
+
+       Clicking a task's id unfolds its subtasks as rows directly beneath it.
+       They live in the same table, so every column stays aligned with the
+       task above rather than drifting in a nested table of its own.
+
+       Which tasks are open is remembered per project for the session, so
+       sorting a column or changing a filter does not collapse everything the
+       user had just opened.
+    ------------------------------------------------------------------ */
+
+    var SUBTREE_KEY = 'sb-subtree-open';
+
+    function subtreeStore() {
+        try {
+            return JSON.parse(sessionStorage.getItem(SUBTREE_KEY) || '{}');
+        } catch (err) {
+            return {};
+        }
+    }
+
+    function rememberSubtree(id, open) {
+        try {
+            var state = subtreeStore();
+            if (open) { state[id] = 1; } else { delete state[id]; }
+            sessionStorage.setItem(SUBTREE_KEY, JSON.stringify(state));
+        } catch (err) {
+            /* private browsing, or storage disabled - the tree still works,
+               it just forgets between page loads */
+        }
+    }
+
+    function setSubtree(button, open) {
+        var id = button.getAttribute('data-zg-subtree');
+        var rows = document.querySelectorAll('[data-zg-subtree-of="' + id + '"]');
+
+        for (var i = 0; i < rows.length; i++) {
+            rows[i].hidden = !open;
+        }
+
+        button.setAttribute('aria-expanded', open ? 'true' : 'false');
+        button.classList.toggle('is-open', open);
+        button.setAttribute('title', open ? 'Hide subtasks' : 'Show subtasks');
+        rememberSubtree(id, open);
+    }
+
+    on('click', '[data-zg-subtree]', function (e) {
+        e.preventDefault();
+        setSubtree(this, this.getAttribute('aria-expanded') !== 'true');
+    });
+
+    function restoreSubtrees() {
+        var state = subtreeStore();
+        var buttons = document.querySelectorAll('[data-zg-subtree]');
+
+        for (var i = 0; i < buttons.length; i++) {
+            if (state[buttons[i].getAttribute('data-zg-subtree')]) {
+                setSubtree(buttons[i], true);
+            }
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', restoreSubtrees);
+    } else {
+        restoreSubtrees();
+    }
+
 }());

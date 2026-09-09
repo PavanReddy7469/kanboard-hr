@@ -16,17 +16,13 @@
         </div>
     </div>
 
-    <div class="form-columns" style="display: flex; gap: 16px; margin-top: 10px; margin-bottom: 6px;">
+    <div class="form-columns" style="display: flex; gap: 16px; margin-top: 10px; margin-bottom: 12px;">
+        <div style="flex: 1;">
+            <?= $this->subtask->renderStartDateField($values, $errors) ?>
+        </div>
         <div style="flex: 1;">
             <?= $this->subtask->renderDueDateField($values, $errors) ?>
         </div>
-        <div style="flex: 1;">
-            <?= $this->subtask->renderTimeEstimatedField($values, $errors) ?>
-        </div>
-    </div>
-
-    <div style="margin-top: 10px; margin-bottom: 12px;">
-        <?= $this->subtask->renderTimeSpentField($values, $errors) ?>
     </div>
 
     <?= $this->hook->render('template:subtask:form:edit', array('values' => $values, 'errors' => $errors)) ?>

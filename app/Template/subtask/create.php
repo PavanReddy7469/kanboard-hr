@@ -17,7 +17,14 @@
 
     <?= $this->subtask->renderBulkTitleField($values, $errors, array('autofocus')) ?>
     <?= $this->subtask->renderAssigneeField($users_list, $values, $errors) ?>
-    <?= $this->subtask->renderTimeEstimatedField($values, $errors) ?>
+    <div class="form-columns" style="display: flex; gap: 16px;">
+        <div style="flex: 1;">
+            <?= $this->subtask->renderStartDateField($values, $errors) ?>
+        </div>
+        <div style="flex: 1;">
+            <?= $this->subtask->renderDueDateField($values, $errors) ?>
+        </div>
+    </div>
 
     <?= $this->hook->render('template:subtask:form:create', array('values' => $values, 'errors' => $errors)) ?>
 

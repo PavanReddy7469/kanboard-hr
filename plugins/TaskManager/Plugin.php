@@ -115,7 +115,7 @@ class Plugin extends Base
             // TaskCreationModel and TaskModificationModel refuse dates in the
             // past. Overriding the models rather than the validators catches
             // the Gantt drag, the bulk tools and the API as well as the forms.
-            'Plugin\TaskManager\Model' => array('ProjectModel', 'TaskStatusModel', 'TaskCreationModel', 'TaskModificationModel', 'MilestoneModel', 'TaskListModel', 'DependencyModel', 'TimesheetModel', 'TimeEntryModel', 'RoleSeedModel', 'DashboardModel', 'GridModel', 'DeliverableModel'),
+            'Plugin\TaskManager\Model' => array('ProjectModel', 'TaskStatusModel', 'TaskCreationModel', 'TaskModificationModel', 'SubtaskModel', 'MilestoneModel', 'TaskListModel', 'DependencyModel', 'TimesheetModel', 'TimeEntryModel', 'RoleSeedModel', 'DashboardModel', 'GridModel', 'DeliverableModel'),
         );
     }
 

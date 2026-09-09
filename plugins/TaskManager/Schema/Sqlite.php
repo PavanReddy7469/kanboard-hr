@@ -4,7 +4,7 @@ namespace Kanboard\Plugin\TaskManager\Schema;
 
 use PDO;
 
-const VERSION = 7;
+const VERSION = 8;
 
 /**
  * Put every project on the SUPERBEE P1-P10 scale.
@@ -230,4 +230,12 @@ function version_7(PDO $pdo)
     // accounts predate it, and not every account is an employee.
     $pdo->exec("ALTER TABLE users ADD COLUMN employee_id TEXT DEFAULT NULL");
     $pdo->exec("CREATE INDEX IF NOT EXISTS users_employee_idx ON users(employee_id)");
+}
+
+function version_8(PDO $pdo)
+{
+    // Subtasks already carry a due date; they gain a start date so the pair
+    // reads the same way it does on a task. Both are plain timestamps, 0 when
+    // unset, matching how date_due is already stored.
+    $pdo->exec("ALTER TABLE subtasks ADD COLUMN date_started INTEGER DEFAULT 0");
 }
