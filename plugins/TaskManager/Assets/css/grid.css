@@ -1291,3 +1291,93 @@
     color: var(--sb-700);
     font-size: 0.8125rem;
 }
+
+/* --- Documents & references tab -------------------------------------
+   Two ways in, side by side and equally weighted: point at where the
+   material lives, or upload it. */
+
+.zp-docactions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.zp-docbtn {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 12px 14px;
+    background: var(--sb-white);
+    border: 1px solid var(--sb-200);
+    border-radius: var(--sb-r-card);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.zp-docbtn:hover {
+    background: var(--sb-50);
+    border-color: var(--sb-navy);
+    box-shadow: 0 0 0 3px var(--sb-navy-pill);
+}
+
+.zp-docbtn .fa {
+    font-size: 1rem;
+    color: var(--sb-navy);
+    flex: 0 0 auto;
+}
+
+.zp-docbtn span   { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.zp-docbtn strong { font-size: 0.8125rem; font-weight: 700; color: var(--sb-900); }
+.zp-docbtn em     { font-size: 0.6875rem; font-style: normal; color: var(--sb-500); }
+
+.zp-docgroup { margin-bottom: 18px; }
+
+.zp-docheading {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 8px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--sb-500);
+}
+
+.zp-docheading .fa { color: var(--sb-400); }
+
+.zp-doccount {
+    min-width: 17px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--sb-200);
+    color: var(--sb-700);
+    font-size: 0.6875rem;
+    line-height: 17px;
+    text-align: center;
+    letter-spacing: 0;
+}
+
+.zp-docurl {
+    font-size: 0.75rem;
+    color: var(--sb-500);
+    word-break: break-all;
+}
+
+.zp-extico { font-size: 0.6875rem; opacity: 0.55; margin-left: 4px; }
+
+.zp-docrowactions { display: inline-flex; gap: 8px; }
+
+.zp-docrowactions a {
+    color: var(--sb-400);
+    text-decoration: none;
+    transition: color 110ms ease;
+}
+
+.zp-docrowactions a:hover { color: var(--sb-navy); }
+
+@media (max-width: 700px) {
+    .zp-docactions { grid-template-columns: 1fr; }
+}

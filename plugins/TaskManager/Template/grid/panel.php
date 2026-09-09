@@ -156,6 +156,7 @@ $row = function ($label, $value, $hint = '') {
             'comments'     => $comments,
             'subtasks'     => $subtasks,
             'files'        => $files,
+            'links'        => $links,
             'dependencies' => $dependencies,
             'entries'      => $entries,
             'transitions'  => $transitions,

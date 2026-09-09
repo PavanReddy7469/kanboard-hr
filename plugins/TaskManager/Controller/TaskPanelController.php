@@ -60,6 +60,12 @@ class TaskPanelController extends BaseController
             'comments'     => $this->commentModel->getAll($task['id']),
             'subtasks'     => $this->subtaskModel->getAll($task['id']),
             'files'        => $this->taskFileModel->getAll($task['id']),
+
+            /* Reference material the task points at rather than carries:
+               specifications, drawings, repositories, shared drives. Kanboard
+               already models these as external links; they simply were not
+               being shown anywhere in this panel. */
+            'links'        => $this->taskExternalLinkModel->getAll($task['id']),
             'dependencies' => $this->dependencyModel->getAllByTask($task['id']),
             'entries'      => $this->getTimeEntries($task['id']),
             'transitions'  => $this->transitionModel->getAllByTask($task['id']),
