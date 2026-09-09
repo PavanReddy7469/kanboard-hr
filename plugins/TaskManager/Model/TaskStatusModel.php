@@ -2,6 +2,8 @@
 
 namespace Kanboard\Plugin\TaskManager\Model;
 
+use Kanboard\Model\TaskModel;
+
 /**
  * The completion gate.
  *
@@ -42,7 +44,64 @@ class TaskStatusModel extends \Kanboard\Model\TaskStatusModel
             return false;
         }
 
-        return parent::close($task_id);
+        $task = $this->taskFinderModel->getById($task_id);
+        $closed = parent::close($task_id);
+
+        if ($closed && ! empty($task)) {
+            $this->promoteAfterClose($task);
+        }
+
+        return $closed;
+    }
+
+    /**
+     * Close the ranking up behind a finished task.
+     *
+     * Priority here is a queue position, not a label: P1 is the work that
+     * comes first. When P1 finishes, whatever was behind it is now first, so
+     * every open task ranked below the finished one moves up a step. Gaps
+     * survive - a project running P1, P2, P5 becomes P1, P4 - because a gap
+     * someone left is usually deliberate.
+     *
+     * The finished task's own priority is cleared. It has no place in a queue
+     * it has left, and leaving it at P1 would show two P1s side by side.
+     *
+     * Scope is the project. Ranks are only comparable within one.
+     *
+     * @param  array $task  the task as it was before closing
+     */
+    protected function promoteAfterClose(array $task)
+    {
+        $priority  = (int) $task['priority'];
+        $projectId = (int) $task['project_id'];
+
+        // A task that never carried a rank does not vacate a place in the queue.
+        if ($priority <= 0 || $projectId <= 0) {
+            return;
+        }
+
+        $this->db->startTransaction();
+
+        try {
+            $this->db->table(TaskModel::TABLE)
+                ->eq('id', (int) $task['id'])
+                ->update(array('priority' => 0));
+
+            /* One statement rather than a row at a time: the set being moved
+               is every open task ranked below the one that just finished, and
+               they all move by the same step. */
+            $this->db->getConnection()->exec(sprintf(
+                'UPDATE %s SET priority = priority - 1 WHERE project_id = %d AND is_active = %d AND priority > %d',
+                TaskModel::TABLE,
+                $projectId,
+                TaskModel::STATUS_OPEN,
+                $priority
+            ));
+
+            $this->db->closeTransaction();
+        } catch (\Exception $e) {
+            $this->db->cancelTransaction();
+        }
     }
 
     /**
