@@ -30,4 +30,223 @@
             window.KB.modal.close();
         }
     });
+
+    /* ------------------------------------------------------------------
+       No backdating.
+
+       Dates are refused in the past by the models, which is what actually
+       enforces the rule - this is only so the user finds out while they are
+       still filling the form rather than after a failed save.
+
+       Two things are needed. Kanboard binds a jQuery UI datepicker to every
+       .form-date input, so the calendar has to be told today is its floor;
+       and because the underlying control is a plain text input, someone can
+       still type an old date past the calendar, so typed values get checked
+       on the way out of the field.
+
+       Kanboard re-runs its own initialisation whenever a modal loads, which
+       replaces the datepicker and discards our option, so this re-applies on
+       an interval and after AJAX rather than once at load.
+    ------------------------------------------------------------------ */
+
+    function todayAtMidnight() {
+        var d = new Date();
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }
+
+    function applyMinDate() {
+        if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.datepicker) {
+            return;
+        }
+
+        window.jQuery('.form-date, .form-datetime').each(function () {
+            var $el = window.jQuery(this);
+
+            try {
+                // Throws if no datepicker is attached to this element yet.
+                if ($el.data('datepicker') && $el.datepicker('option', 'minDate') !== 0) {
+                    $el.datepicker('option', 'minDate', 0);
+                }
+            } catch (err) {
+                /* nothing attached yet; the next pass will pick it up */
+            }
+        });
+    }
+
+    function markInvalid(input, isBad) {
+        input.classList.toggle('sb-date-past', isBad);
+        input.setAttribute('aria-invalid', isBad ? 'true' : 'false');
+
+        var next = input.nextElementSibling;
+        var hasNote = next && next.classList && next.classList.contains('sb-date-past-note');
+
+        if (isBad && !hasNote) {
+            var note = document.createElement('div');
+            note.className = 'sb-date-past-note';
+            note.textContent = 'Dates cannot be in the past.';
+            input.parentNode.insertBefore(note, input.nextSibling);
+        } else if (!isBad && hasNote) {
+            next.parentNode.removeChild(next);
+        }
+    }
+
+    /* The field carries whatever format the user's profile is set to, so let
+       the browser parse it rather than guessing at the order of day and
+       month. An unparseable string is left alone - the server decides. */
+    function checkTypedDate(input) {
+        var raw = (input.value || '').trim();
+
+        if (raw === '') {
+            markInvalid(input, false);
+            return;
+        }
+
+        var parsed = new Date(raw.replace(/-/g, '/'));
+
+        if (isNaN(parsed.getTime())) {
+            markInvalid(input, false);
+            return;
+        }
+
+        parsed.setHours(0, 0, 0, 0);
+        markInvalid(input, parsed < todayAtMidnight());
+    }
+
+    on('change', '.form-date, .form-datetime', function () {
+        checkTypedDate(this);
+    });
+
+    on('blur', '.form-date, .form-datetime', function () {
+        checkTypedDate(this);
+    });
+
+    applyMinDate();
+    setInterval(applyMinDate, 700);
+
+    if (window.jQuery) {
+        window.jQuery(document).ajaxComplete(applyMinDate);
+    }
+
+    /* ------------------------------------------------------------------
+       Click-to-rename.
+
+       The project name in the breadcrumb behaves like a filename: click it,
+       it becomes an input, Enter commits and Escape abandons. Blur commits
+       too, because clicking away after typing means the change was intended.
+
+       The element is only rendered with data-sb-inline-edit for someone
+       allowed to rename it. The endpoint checks permission again regardless -
+       this is convenience, not the control.
+    ------------------------------------------------------------------ */
+
+    function inlineEditActive(el) {
+        return el.querySelector('input.sb-inline-input') !== null;
+    }
+
+    function startInlineEdit(el) {
+        if (inlineEditActive(el)) {
+            return;
+        }
+
+        var original = el.textContent.trim();
+        var url = el.getAttribute('data-sb-url');
+        var field = el.getAttribute('data-sb-inline-edit');
+
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'sb-inline-input';
+        input.value = original;
+        input.setAttribute('aria-label', 'Project name');
+
+        el.textContent = '';
+        el.appendChild(input);
+        el.classList.add('is-editing');
+
+        input.focus();
+        input.select();
+
+        var settled = false;
+
+        function restore(text) {
+            el.classList.remove('is-editing', 'is-saving');
+            el.textContent = text;
+        }
+
+        function cancel() {
+            if (settled) { return; }
+            settled = true;
+            restore(original);
+        }
+
+        function commit() {
+            if (settled) { return; }
+
+            var next = input.value.trim();
+
+            if (next === '' || next === original) {
+                cancel();
+                return;
+            }
+
+            settled = true;
+            el.classList.add('is-saving');
+
+            var body = new URLSearchParams();
+            body.append('field', field);
+            body.append('value', next);
+
+            fetch(url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: body.toString()
+            }).then(function (r) {
+                return r.json().catch(function () { return { ok: false }; });
+            }).then(function (data) {
+                if (data && data.ok) {
+                    restore(next);
+                    document.title = document.title.replace(original, next);
+                } else {
+                    restore(original);
+                    window.alert((data && data.message) || 'Could not rename this project.');
+                }
+            }).catch(function () {
+                restore(original);
+                window.alert('Could not reach the server. The name was not changed.');
+            });
+        }
+
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                commit();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                cancel();
+            }
+            e.stopPropagation();
+        });
+
+        input.addEventListener('blur', commit);
+
+        // Keep a click inside the input from re-triggering the opener.
+        input.addEventListener('click', function (e) { e.stopPropagation(); });
+    }
+
+    on('click', '[data-sb-inline-edit]', function (e) {
+        if (inlineEditActive(this)) {
+            return;
+        }
+        e.preventDefault();
+        startInlineEdit(this);
+    });
+
+    on('keydown', '[data-sb-inline-edit]', function (e) {
+        if ((e.key === 'Enter' || e.key === ' ') && !inlineEditActive(this)) {
+            e.preventDefault();
+            startInlineEdit(this);
+        }
+    });
+
 }());

@@ -873,3 +873,89 @@ html body input.sb-search-input {
         margin-bottom: 16px;
     }
 }
+
+/* --- a date typed into the past ------------------------------------
+   The models refuse it either way; this only tells the user before
+   they submit rather than after. */
+
+input.sb-date-past {
+    border-color: #dc2626 !important;
+    background: #fef2f2;
+}
+
+.sb-date-past-note {
+    margin: 4px 0 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #dc2626;
+}
+
+/* --- click-to-rename in the breadcrumb -----------------------------
+   The affordance stays quiet until hover, so the header still reads as
+   a heading rather than a form. */
+
+.sb-project-name.is-editable {
+    cursor: text;
+    border-radius: 5px;
+    padding: 1px 5px;
+    margin: 0 -5px;
+    transition: background 120ms ease, box-shadow 120ms ease;
+}
+
+.sb-project-name.is-editable:hover {
+    background: var(--sb-100);
+    box-shadow: inset 0 0 0 1px var(--sb-300);
+}
+
+.sb-project-name.is-editable:focus-visible {
+    outline: 2px solid var(--sb-navy);
+    outline-offset: 1px;
+}
+
+.sb-project-name.is-editing {
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sb-project-name.is-saving {
+    opacity: 0.55;
+}
+
+input.sb-inline-input {
+    font: inherit;
+    color: inherit;
+    min-width: 220px;
+    max-width: 460px;
+    padding: 1px 5px;
+    background: var(--sb-white);
+    border: 1px solid var(--sb-navy);
+    border-radius: 5px;
+    box-shadow: 0 0 0 3px var(--sb-navy-pill);
+}
+
+input.sb-inline-input:focus {
+    outline: none;
+}
+
+/* --- refused backdating -------------------------------------------- */
+
+.sb-backdating-notice {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 14px;
+    padding: 11px 14px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-left: 3px solid #dc2626;
+    border-radius: var(--sb-r-card);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #991b1b;
+}
+
+.sb-backdating-notice .fa {
+    color: #dc2626;
+}

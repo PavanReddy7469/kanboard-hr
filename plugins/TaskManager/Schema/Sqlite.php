@@ -4,7 +4,7 @@ namespace Kanboard\Plugin\TaskManager\Schema;
 
 use PDO;
 
-const VERSION = 6;
+const VERSION = 7;
 
 /**
  * Put every project on the SUPERBEE P1-P10 scale.
@@ -221,4 +221,13 @@ function version_6(PDO $pdo)
 
     $pdo->exec('CREATE INDEX IF NOT EXISTS taskmanager_deliverables_task_idx ON taskmanager_deliverables(task_id)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS taskmanager_deliverables_project_idx ON taskmanager_deliverables(project_id, status)');
+}
+
+function version_7(PDO $pdo)
+{
+    // Employee ID, shown alongside the name as "NAME (EMP ID)" wherever a
+    // person is picked or displayed. Nullable and unconstrained: existing
+    // accounts predate it, and not every account is an employee.
+    $pdo->exec("ALTER TABLE users ADD COLUMN employee_id TEXT DEFAULT NULL");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS users_employee_idx ON users(employee_id)");
 }

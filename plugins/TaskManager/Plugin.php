@@ -21,6 +21,16 @@ class Plugin extends Base
         $this->helper->register('dashboard', '\Kanboard\Plugin\TaskManager\Helper\DashboardHelper');
         $this->helper->register('deliverable', '\Kanboard\Plugin\TaskManager\Helper\DeliverableHelper');
 
+        /* Replaces core's 'user' helper so a person reads as "NAME (EMP ID)".
+           UserModel::prepareList() builds every user dropdown through
+           getFullname(), so overriding here reaches task owner, assignee,
+           project owner and group pickers without touching their queries. */
+        $this->helper->register('user', '\Kanboard\Plugin\TaskManager\Helper\UserHelper');
+
+        /* Why a backdated save was refused. Core overwrites the flash with a
+           generic message right after, so this rides in its own slot. */
+        $this->template->hook->attach('template:layout:top', 'TaskManager:layout/backdating_notice');
+
         // Assets
         $this->hook->on('template:layout:css', array('template' => 'plugins/TaskManager/Assets/css/bundle.css'));
         
@@ -101,7 +111,11 @@ class Plugin extends Base
         return array(
             // TaskStatusModel overrides core's: closing a task now requires an
             // approved deliverable, and every close path goes through it.
-            'Plugin\TaskManager\Model' => array('ProjectModel', 'TaskStatusModel', 'MilestoneModel', 'TaskListModel', 'DependencyModel', 'TimesheetModel', 'TimeEntryModel', 'RoleSeedModel', 'DashboardModel', 'GridModel', 'DeliverableModel'),
+            //
+            // TaskCreationModel and TaskModificationModel refuse dates in the
+            // past. Overriding the models rather than the validators catches
+            // the Gantt drag, the bulk tools and the API as well as the forms.
+            'Plugin\TaskManager\Model' => array('ProjectModel', 'TaskStatusModel', 'TaskCreationModel', 'TaskModificationModel', 'MilestoneModel', 'TaskListModel', 'DependencyModel', 'TimesheetModel', 'TimeEntryModel', 'RoleSeedModel', 'DashboardModel', 'GridModel', 'DeliverableModel'),
         );
     }
 

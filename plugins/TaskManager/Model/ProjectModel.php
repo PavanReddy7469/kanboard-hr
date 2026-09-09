@@ -14,12 +14,26 @@ namespace Kanboard\Plugin\TaskManager\Model;
  */
 class ProjectModel extends \Kanboard\Model\ProjectModel
 {
+    use NoBackdatingTrait;
+
     const PRIORITY_START   = 1;
     const PRIORITY_END     = 10;
     const PRIORITY_DEFAULT = 5;
 
     public function create(array $values, $userId = 0, $addUser = false)
     {
+        $this->backdatingRefusal = '';
+
+        $refused = $this->findBackdatedFields($values, array(
+            'start_date' => t('Start date'),
+            'end_date'   => t('End date'),
+        ));
+
+        if (! empty($refused)) {
+            $this->refuseBackdating($refused);
+            return false;
+        }
+
         $values = $this->applyPriorityScale($values);
 
         /* Core overwrites owner_id with whoever is creating the project, so a
@@ -41,6 +55,36 @@ class ProjectModel extends \Kanboard\Model\ProjectModel
         }
 
         return $projectId;
+    }
+
+    /**
+     * Same rule when a project is edited. The existing row is passed in so an
+     * old project keeps its original start date - only a date being moved
+     * backwards is refused.
+     *
+     * @param  array $values
+     * @return boolean
+     */
+    public function update(array $values)
+    {
+        $this->backdatingRefusal = '';
+
+        if (! empty($values['id'])) {
+            $existing = $this->getById($values['id']);
+
+            if (! empty($existing)) {
+                $refused = $this->findBackdatedFields($values, array(
+                    'start_date' => t('Start date'),
+                    'end_date'   => t('End date'),
+                ), $existing);
+
+                if (! empty($refused)) {
+                    return $this->refuseBackdating($refused);
+                }
+            }
+        }
+
+        return parent::update($values);
     }
 
     /**

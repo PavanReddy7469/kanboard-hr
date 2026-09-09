@@ -77,7 +77,7 @@ $row = function ($label, $value, $hint = '') {
             <dt><?= t('Owner') ?></dt>
             <dd>
                 <?php if (! empty($task['assignee_username'])): ?>
-                    <span class="zp-chip"><?= $this->text->e($task['assignee_name'] ?: $task['assignee_username']) ?></span>
+                    <span class="zp-chip"><?= $this->text->e($this->user->formatName($task['owner_id'], $task['assignee_name'] ?: $task['assignee_username'])) ?></span>
                 <?php else: ?>
                     <span class="zp-muted"><?= t('Unassigned') ?></span>
                 <?php endif ?>

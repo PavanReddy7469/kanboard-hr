@@ -14,6 +14,8 @@ use Kanboard\Model\TaskModel;
  */
 class MilestoneModel extends Base
 {
+    use NoBackdatingTrait;
+
     const TABLE = 'taskmanager_milestones';
 
     /**
@@ -127,6 +129,18 @@ class MilestoneModel extends Base
      */
     public function create(array $values)
     {
+        $this->backdatingRefusal = '';
+
+        $refused = $this->findBackdatedFields($values, array(
+            'date_start' => t('Start date'),
+            'date_due'   => t('Due date'),
+        ));
+
+        if (! empty($refused)) {
+            $this->refuseBackdating($refused);
+            return false;
+        }
+
         $values = $this->prepare($values);
         $values['position'] = $this->getLastPosition($values['project_id']);
 
@@ -139,7 +153,22 @@ class MilestoneModel extends Base
      */
     public function update(array $values)
     {
+        $this->backdatingRefusal = '';
         $milestoneId = (int) $values['id'];
+
+        // Compare against the stored milestone, so one that already runs from
+        // an earlier date can still be renamed without tripping the rule.
+        $existing = $this->db->table(self::TABLE)->eq('id', $milestoneId)->findOne();
+
+        $refused = $this->findBackdatedFields($values, array(
+            'date_start' => t('Start date'),
+            'date_due'   => t('Due date'),
+        ), is_array($existing) ? $existing : array());
+
+        if (! empty($refused)) {
+            return $this->refuseBackdating($refused);
+        }
+
         $values = $this->prepare($values);
         unset($values['project_id']);
 

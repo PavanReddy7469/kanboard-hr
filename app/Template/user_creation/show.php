@@ -39,6 +39,16 @@
             </div>
         </div>
 
+                <!-- Employee ID: shown as NAME (EMP ID) wherever a person is picked -->
+        <div style="margin-bottom: 16px;">
+            <div style="max-width: calc(50% - 8px);">
+                <label for="form-employee_id" style="display: block; font-size: 0.84rem; font-weight: 700; color: #334155; margin-bottom: 6px;">
+                    <?= t('Employee ID') ?>
+                </label>
+                <?= $this->form->text('employee_id', $values, $errors, array('placeholder="e.g. SB-1042"', 'maxlength="50"', 'style' => 'width: 100%; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; outline: none; background: #ffffff;')) ?>
+            </div>
+        </div>
+
         <!-- Row 2: Email & Role -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
             <div>

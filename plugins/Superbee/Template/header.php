@@ -52,7 +52,24 @@
             <svg class="sb-crumb-sep" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
             <span class="sb-project-chip">
                 <span class="sb-project-dot <?= empty($project['is_active']) ? 'is-off' : '' ?>"></span>
-                <span class="sb-project-name"><?= $this->text->e($project['name']) ?></span>
+                <?php
+                    /* Click to rename, the way a file is renamed. Only rendered
+                       editable for someone allowed to change it - everyone else
+                       gets plain text, and the endpoint refuses them anyway. */
+                    $sbCanRename = $this->user->isAdmin()
+                        || $this->projectRole->getProjectUserRole($project['id']) === \Kanboard\Core\Security\Role::PROJECT_MANAGER;
+                ?>
+                <?php if ($sbCanRename): ?>
+                    <span class="sb-project-name is-editable"
+                          data-sb-inline-edit="name"
+                          data-sb-project-id="<?= (int) $project['id'] ?>"
+                          data-sb-url="<?= $this->url->href('ProjectInlineController', 'save', array('plugin' => 'TaskManager', 'project_id' => $project['id'], 'csrf_token' => $this->app->getToken()->getReusableCSRFToken())) ?>"
+                          title="<?= t('Click to rename') ?>"
+                          role="button"
+                          tabindex="0"><?= $this->text->e($project['name']) ?></span>
+                <?php else: ?>
+                    <span class="sb-project-name"><?= $this->text->e($project['name']) ?></span>
+                <?php endif ?>
             </span>
         <?php else: ?>
             <span class="sb-page-title"><?= $this->text->e($this->shell->getPageTitle(isset($title) ? $title : '')) ?></span>
