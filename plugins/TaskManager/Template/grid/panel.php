@@ -15,6 +15,43 @@ $row = function ($label, $value, $hint = '') {
         <?php if ($can_edit): ?>
             <?= $this->modal->large('pencil-square-o', t('Edit'), 'TaskModificationController', 'edit', array('task_id' => $tid, 'project_id' => $pid)) ?>
         <?php endif ?>
+
+        <?php /* Overflow menu: the actions that act on the task as a whole
+                 rather than on one of its fields. */ ?>
+        <span class="zp-menu">
+            <a href="#" class="zp-menu-toggle" data-zp-menu title="<?= t('More actions') ?>" aria-haspopup="true" aria-expanded="false">
+                <i class="fa fa-ellipsis-h" aria-hidden="true"></i>
+            </a>
+
+            <span class="zp-menu-list" hidden>
+                <button type="button"
+                        class="zp-menu-item"
+                        <?php /* Relative on purpose. url->base() depends on
+                                 APPLICATION_URL, which is unset here and yields
+                                 a hostname with no port; the browser knows its
+                                 own origin, so it builds the absolute link. */ ?>
+                        data-zp-copy-link="<?= $this->text->e($this->url->href('TaskViewController', 'show', array('task_id' => $tid, 'project_id' => $pid))) ?>">
+                    <i class="fa fa-link" aria-hidden="true"></i> <?= t('Copy link') ?>
+                </button>
+
+                <?php if ($can_edit): ?>
+                    <a class="zp-menu-item js-modal-confirm"
+                       href="<?= $this->url->href('TaskDuplicationController', 'duplicate', array('task_id' => $tid, 'project_id' => $pid)) ?>">
+                        <i class="fa fa-files-o" aria-hidden="true"></i> <?= t('Duplicate') ?>
+                    </a>
+                <?php endif ?>
+
+                <?php if ($this->projectRole->canRemoveTask($task)): ?>
+                    <?php /* Kanboard deletes outright - there is no trash to
+                             restore from - so this says delete, and the
+                             confirmation says permanently. */ ?>
+                    <a class="zp-menu-item is-danger js-modal-confirm"
+                       href="<?= $this->url->href('TaskSuppressionController', 'confirm', array('task_id' => $tid, 'project_id' => $pid)) ?>">
+                        <i class="fa fa-trash-o" aria-hidden="true"></i> <?= t('Delete') ?>
+                    </a>
+                <?php endif ?>
+            </span>
+        </span>
         <a href="<?= $this->url->href('TaskGridController', 'show', array('plugin' => 'TaskManager', 'task_id' => $tid, 'project_id' => $pid)) ?>" title="<?= t('Open full page') ?>">
             <i class="fa fa-expand" aria-hidden="true"></i>
         </a>

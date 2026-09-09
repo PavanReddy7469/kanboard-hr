@@ -318,4 +318,102 @@
         restoreSubtrees();
     }
 
+    /* ------------------------------------------------------------------
+       Task panel overflow menu, and Copy link.
+
+       The clipboard API only exists in a secure context. On localhost that
+       is satisfied, but the moment this is served over plain HTTP on the
+       LAN, navigator.clipboard is undefined - so there is a fallback, and
+       if both fail the URL is shown for the user to copy by hand rather
+       than the button silently doing nothing.
+    ------------------------------------------------------------------ */
+
+    function closePanelMenus(except) {
+        var lists = document.querySelectorAll('.zp-menu-list');
+
+        for (var i = 0; i < lists.length; i++) {
+            if (lists[i] !== except) {
+                lists[i].hidden = true;
+                var toggle = lists[i].parentNode.querySelector('[data-zp-menu]');
+                if (toggle) { toggle.setAttribute('aria-expanded', 'false'); }
+            }
+        }
+    }
+
+    on('click', '[data-zp-menu]', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        var list = this.parentNode.querySelector('.zp-menu-list');
+        if (!list) { return; }
+
+        var opening = list.hidden;
+        closePanelMenus(list);
+        list.hidden = !opening;
+        this.setAttribute('aria-expanded', opening ? 'true' : 'false');
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest || !e.target.closest('.zp-menu')) {
+            closePanelMenus(null);
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { closePanelMenus(null); }
+    });
+
+    function flashCopied(button, text) {
+        var original = button.innerHTML;
+        button.innerHTML = '<i class="fa fa-check" aria-hidden="true"></i> ' + text;
+        setTimeout(function () { button.innerHTML = original; }, 1400);
+    }
+
+    function legacyCopy(value) {
+        var field = document.createElement('textarea');
+        field.value = value;
+        field.setAttribute('readonly', '');
+        field.style.position = 'fixed';
+        field.style.opacity = '0';
+        document.body.appendChild(field);
+        field.select();
+
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+
+        document.body.removeChild(field);
+        return ok;
+    }
+
+    on('click', '[data-zp-copy-link]', function (e) {
+        e.preventDefault();
+
+        var button = this;
+        var href = this.getAttribute('data-zp-copy-link');
+        // The template emits a relative path; the origin comes from the browser
+        // so the link is correct on localhost, on the LAN, and behind any port.
+        var url = href.charAt(0) === '/'
+            ? window.location.origin + href
+            : href;
+
+        function failed() {
+            // Never pretend it worked: show the URL so it can be copied by hand.
+            window.prompt('Copy this link:', url);
+        }
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(url).then(function () {
+                flashCopied(button, 'Copied');
+            }).catch(function () {
+                if (legacyCopy(url)) { flashCopied(button, 'Copied'); } else { failed(); }
+            });
+        } else if (legacyCopy(url)) {
+            flashCopied(button, 'Copied');
+        } else {
+            failed();
+        }
+
+        closePanelMenus(null);
+    });
+
 }());

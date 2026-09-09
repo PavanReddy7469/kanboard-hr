@@ -1381,3 +1381,48 @@
 @media (max-width: 700px) {
     .zp-docactions { grid-template-columns: 1fr; }
 }
+
+/* --- task panel overflow menu -------------------------------------- */
+
+.zp-menu { position: relative; display: inline-block; }
+
+.zp-menu-list {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 40;
+    min-width: 178px;
+    display: flex;
+    flex-direction: column;
+    padding: 5px;
+    background: var(--sb-white);
+    border: 1px solid var(--sb-200);
+    border-radius: var(--sb-r-card);
+    box-shadow: var(--sb-shadow-pop);
+}
+
+.zp-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 8px 10px;
+    background: none;
+    border: 0;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--sb-700);
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.zp-menu-item:hover { background: var(--sb-100); color: var(--sb-900); }
+
+.zp-menu-item .fa { width: 14px; color: var(--sb-500); }
+
+.zp-menu-item.is-danger        { color: #dc2626; }
+.zp-menu-item.is-danger .fa    { color: #dc2626; }
+.zp-menu-item.is-danger:hover  { background: #fef2f2; color: #991b1b; }
