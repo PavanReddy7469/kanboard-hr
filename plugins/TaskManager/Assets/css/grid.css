@@ -1426,3 +1426,208 @@
 .zp-menu-item.is-danger        { color: #dc2626; }
 .zp-menu-item.is-danger .fa    { color: #dc2626; }
 .zp-menu-item.is-danger:hover  { background: #fef2f2; color: #991b1b; }
+
+/* --- filter panel ---------------------------------------------------
+   A slide-out on the right. Collapsed rows, one per field; nothing is
+   applied until Find, so a filter can be built in steps. */
+
+.zf-open {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 13px;
+    color: var(--sb-navy);
+    font-size: 0.84rem;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: var(--sb-r-control);
+}
+
+.zf-open:hover     { background: var(--sb-100); }
+.zf-open .fa       { color: var(--sb-navy); }
+
+.zf-open-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--sb-amber);
+}
+
+.zf-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    background: rgba(15, 23, 42, 0.28);
+}
+
+.zf-panel {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    z-index: 901;
+    width: 380px;
+    max-width: 92vw;
+    display: flex;
+    flex-direction: column;
+    background: var(--sb-white);
+    border-left: 1px solid var(--sb-200);
+    box-shadow: -12px 0 34px -14px rgba(15, 23, 42, 0.3);
+}
+
+.zf-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid var(--sb-100);
+}
+
+.zf-head h3 { margin: 0; font-size: 1rem; font-weight: 700; color: var(--sb-900); }
+
+.zf-reset {
+    background: none; border: 0; padding: 0;
+    font: inherit; font-size: 0.8125rem; font-weight: 600;
+    color: var(--sb-navy); cursor: pointer;
+}
+
+.zf-search {
+    position: relative;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--sb-100);
+}
+
+.zf-search .fa {
+    position: absolute; left: 29px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--sb-400); font-size: 0.8125rem;
+}
+
+.zf-search input {
+    width: 100%;
+    padding: 8px 11px 8px 30px;
+    font: inherit; font-size: 0.8125rem;
+    border: 1px solid var(--sb-200);
+    border-radius: var(--sb-r-control);
+    background: var(--sb-50);
+}
+
+.zf-body { flex: 1 1 auto; overflow-y: auto; }
+
+.zf-row { border-bottom: 1px solid var(--sb-100); }
+
+.zf-rowhead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 13px 18px;
+    background: none; border: 0;
+    font: inherit; font-size: 0.875rem; font-weight: 600;
+    color: var(--sb-800);
+    cursor: pointer;
+    text-align: left;
+}
+
+.zf-rowhead:hover { background: var(--sb-50); }
+
+.zf-row.is-open .zf-rowhead { color: var(--sb-navy); }
+
+.zf-caret { color: var(--sb-400); transition: transform 140ms ease; }
+.zf-row.is-open .zf-caret { transform: rotate(90deg); }
+
+.zf-rowbody {
+    padding: 4px 18px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.zf-op { font-size: 0.75rem; font-weight: 600; color: var(--sb-500); }
+
+.zf-text,
+.zf-daterow input {
+    width: 100%;
+    padding: 8px 11px;
+    font: inherit; font-size: 0.8125rem;
+    border: 1px solid var(--sb-300);
+    border-radius: var(--sb-r-control);
+}
+
+.zf-check {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 0.8125rem;
+    color: var(--sb-700);
+    cursor: pointer;
+}
+
+.zf-daterow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.8125rem;
+    color: var(--sb-600);
+}
+
+.zf-daterow span { flex: 0 0 42px; }
+
+.zf-foot {
+    border-top: 1px solid var(--sb-200);
+    padding: 12px 18px 16px;
+    background: var(--sb-50);
+}
+
+.zf-match {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 12px;
+    font-size: 0.8125rem;
+    color: var(--sb-700);
+}
+
+.zf-match label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+.zf-buttons { display: flex; gap: 10px; }
+
+.zf-find,
+.zf-cancel {
+    flex: 1;
+    padding: 9px 14px;
+    font: inherit; font-size: 0.8125rem; font-weight: 700;
+    border-radius: var(--sb-r-control);
+    cursor: pointer;
+}
+
+.zf-find   { background: var(--sb-navy); border: 1px solid var(--sb-navy); color: var(--sb-white); }
+.zf-find:hover { background: var(--sb-navy-900); }
+.zf-cancel { background: var(--sb-white); border: 1px solid var(--sb-300); color: var(--sb-700); }
+.zf-cancel:hover { background: var(--sb-100); }
+
+body.zf-open { overflow: hidden; }
+
+/* Core's light.min.css styles every input by attribute -
+   input[type="text"]:not(.input-addon-field) - which outranks a plain class
+   selector and was winning here: 4px padding instead of 30px (so the search
+   icon sat on top of the placeholder), a fixed 300px width, and content-box
+   sizing that adds padding on top of the declared width. These selectors are
+   scoped to the panel and specific enough to take it back. */
+.zf-panel .zf-search input[type="text"],
+.zf-panel .zf-rowbody input[type="text"],
+.zf-panel .zf-rowbody input[type="date"] {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    font-size: 0.8125rem;
+    color: var(--sb-800);
+}
+
+.zf-panel .zf-search input[type="text"] {
+    padding: 8px 11px 8px 30px;
+}
+
+.zf-panel .zf-rowbody input[type="text"],
+.zf-panel .zf-rowbody input[type="date"] {
+    padding: 7px 10px;
+}

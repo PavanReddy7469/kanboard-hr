@@ -276,3 +276,14 @@ $sortLink = function ($column, $label) use ($base, $order, $direction) {
     <?php endif ?>
 
 </div>
+
+<?php /* The filter panel lives here because this is where its options exist:
+         the project's columns, its people, its priority range, its tags. */ ?>
+<?= $this->render('TaskManager:grid/filter_panel', array(
+    'project'           => $project,
+    'columns'           => $columns,
+    'column_classes'    => $column_classes,
+    'filter_users'      => isset($filter_users) ? $filter_users : array(),
+    'filter_priorities' => isset($filter_priorities) ? $filter_priorities : array(),
+    'filter_tags'       => isset($filter_tags) ? $filter_tags : array(),
+)) ?>

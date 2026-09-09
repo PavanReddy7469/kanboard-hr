@@ -20,13 +20,15 @@
 
         <input type="hidden" name="search" id="form-search" value="<?= isset($filters['search']) ? $this->text->e($filters['search']) : '' ?>" />
 
-        <div class="input-addon-item" style="display: flex; align-items: center; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-            <?= $this->render('app/filters_helper', array(
-                'reset' => 'status:open',
-                'project' => $project,
-                'users_list' => isset($users_list) ? $users_list : array(),
-                'categories_list' => isset($categories_list) ? $categories_list : array(),
-            )) ?>
-        </div>
+        <?php /* Opens the filter panel rendered by the Tasks grid. The button
+                 is inert on views that do not render one, which is deliberate -
+                 better than a menu of presets that half-apply. */ ?>
+        <a href="#" class="zf-open" data-zf-open title="<?= t('Filter') ?>">
+            <i class="fa fa-filter" aria-hidden="true"></i>
+            <span><?= t('Filter') ?></span>
+            <?php if (! empty($filters['search'])): ?>
+                <span class="zf-open-dot" title="<?= t('A filter is applied') ?>"></span>
+            <?php endif ?>
+        </a>
     </form>
 </div>

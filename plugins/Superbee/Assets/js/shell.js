@@ -416,4 +416,138 @@
         closePanelMenus(null);
     });
 
+    /* ------------------------------------------------------------------
+       Filter panel.
+
+       Builds a Kanboard search string from the panel and navigates to it.
+       Nothing is applied until Find, so a filter can be assembled in steps
+       without the list moving underneath.
+
+       "All of these" is simply how Kanboard's search already behaves - terms
+       are ANDed. "Any of these" has no equivalent in that language, so it is
+       honoured only within a single field (several statuses, several owners),
+       which is where it actually matters. Fields remain ANDed together.
+    ------------------------------------------------------------------ */
+
+    function zfPanel()   { return document.querySelector('[data-zf-panel]'); }
+    function zfOverlay() { return document.querySelector('[data-zf-overlay]'); }
+
+    function zfOpen(open) {
+        var panel = zfPanel(), overlay = zfOverlay();
+        if (!panel) { return; }
+        panel.hidden = !open;
+        if (overlay) { overlay.hidden = !open; }
+        document.body.classList.toggle('zf-open', open);
+    }
+
+    function quote(value) {
+        return /[\s"]/.test(value) ? '"' + value.replace(/"/g, '') + '"' : value;
+    }
+
+    /* Kanboard dates want yyyy-mm-dd, which is what <input type=date> gives. */
+    function buildQuery() {
+        var rows = document.querySelectorAll('[data-zf-field]');
+        var anyMode = false;
+        var matchRadio = document.querySelector('[data-zf-match]:checked');
+        if (matchRadio) { anyMode = matchRadio.value === 'any'; }
+
+        var terms = [];
+
+        for (var i = 0; i < rows.length; i++) {
+            var row = rows[i];
+            var field = row.getAttribute('data-zf-field');
+
+            if (row.getAttribute('data-zf-kind') === 'range') {
+                var from = row.querySelector('[data-zf-from]');
+                var to = row.querySelector('[data-zf-to]');
+                if (from && from.value) { terms.push(field + ':>=' + from.value); }
+                if (to && to.value)     { terms.push(field + ':<=' + to.value); }
+                continue;
+            }
+
+            var text = row.querySelector('input.zf-text[data-zf-value]');
+            if (text) {
+                if (text.value.trim() !== '') { terms.push(field + ':' + quote(text.value.trim())); }
+                continue;
+            }
+
+            var boxes = row.querySelectorAll('input[type=checkbox][data-zf-value]:checked');
+            var picked = [];
+            for (var j = 0; j < boxes.length; j++) { picked.push(boxes[j].value); }
+
+            if (picked.length === 0) { continue; }
+
+            /* Several values for one field read as alternatives either way -
+               that is what picking two statuses means. Kanboard accepts a
+               comma-separated list for exactly this. */
+            if (picked.length === 1 || anyMode || true) {
+                terms.push(field + ':' + picked.map(quote).join(','));
+            }
+        }
+
+        return terms.join(' ');
+    }
+
+    function currentUrlWith(search) {
+        var url = new URL(window.location.href);
+        url.searchParams.set('search', search);
+        url.searchParams.delete('page');
+        return url.toString();
+    }
+
+    on('click', '[data-zf-open]', function (e) {
+        e.preventDefault();
+        zfOpen(true);
+    });
+
+    on('click', '[data-zf-cancel]', function (e) { e.preventDefault(); zfOpen(false); });
+    on('click', '[data-zf-overlay]', function () { zfOpen(false); });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && zfPanel() && !zfPanel().hidden) { zfOpen(false); }
+    });
+
+    on('click', '[data-zf-toggle]', function (e) {
+        e.preventDefault();
+        var body = this.parentNode.querySelector('.zf-rowbody');
+        if (!body) { return; }
+        body.hidden = !body.hidden;
+        this.parentNode.classList.toggle('is-open', !body.hidden);
+    });
+
+    on('click', '[data-zf-find]', function (e) {
+        e.preventDefault();
+        window.location.href = currentUrlWith(buildQuery());
+    });
+
+    on('click', '[data-zf-reset]', function (e) {
+        e.preventDefault();
+        var panel = zfPanel();
+        if (!panel) { return; }
+
+        var inputs = panel.querySelectorAll('input');
+        for (var i = 0; i < inputs.length; i++) {
+            if (inputs[i].type === 'checkbox') { inputs[i].checked = false; }
+            else if (inputs[i].type === 'radio') { inputs[i].checked = inputs[i].value === 'all'; }
+            else { inputs[i].value = ''; }
+        }
+
+        var bodies = panel.querySelectorAll('.zf-rowbody');
+        for (var k = 0; k < bodies.length; k++) {
+            bodies[k].hidden = true;
+            bodies[k].parentNode.classList.remove('is-open');
+        }
+    });
+
+    /* Narrow the list of fields, the way the Filter Search box does. */
+    on('input', '[data-zf-fieldsearch]', function () {
+        var needle = this.value.toLowerCase().trim();
+        var rows = document.querySelectorAll('[data-zf-field]');
+
+        for (var i = 0; i < rows.length; i++) {
+            var label = (rows[i].getAttribute('data-zf-label') || '').toLowerCase();
+            rows[i].hidden = needle !== '' && label.indexOf(needle) === -1;
+        }
+    });
+
 }());

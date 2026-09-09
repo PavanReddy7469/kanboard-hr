@@ -34,6 +34,19 @@ class TaskGridController extends BaseController
         $view      = $this->request->getStringParam('view', GridModel::FILTER_OPEN);
         $grouping  = $this->request->getStringParam('group_by', 'none');
         $search    = $this->request->getStringParam('search');
+
+        /* The header, the view switcher and the Filter dot all read
+           $filters['search'], which ProjectHeaderHelper resolves from the
+           session when the URL carries no search - and defaults to
+           'status:open' when the session is empty too. This grid resolves its
+           own list from the URL alone, so without this line the header would
+           advertise a filter the list had not applied: the dot lit on an
+           unfiltered list, and the Gantt and Calendar links carrying a stale
+           query that hid work the moment you switched view. Writing the
+           effective search back keeps the two in agreement, in both
+           directions - and the filter still travels across views, which is
+           the part of the session behaviour worth keeping. */
+        $this->userSession->setFilters($project['id'], $search);
         $order     = $this->request->getStringParam('order', 'id');
         $direction = strtoupper($this->request->getStringParam('direction', 'ASC')) === 'DESC' ? 'DESC' : 'ASC';
         $scale     = $this->request->getStringParam('scale', 'week');
@@ -79,6 +92,19 @@ class TaskGridController extends BaseController
         foreach (array_keys($params['subtask_statuses']) as $subtaskStatus) {
             $params['subtask_status_classes'][$subtaskStatus] = $this->helper->taskTree->getSubtaskStatusClass($subtaskStatus);
         }
+
+        /* The filter panel composes a Kanboard search string, so it can only
+           offer fields the search language actually understands. Duration and
+           completion percentage are computed for display and have no filter
+           keyword, which is why they are absent from the panel. */
+        $params['filter_users'] = $this->projectUserRoleModel->getAssignableUsersList($project['id'], false);
+
+        $params['filter_priorities'] = array();
+        foreach (range((int) $project['priority_start'], (int) $project['priority_end']) as $p) {
+            $params['filter_priorities'][$p] = 'P'.$p;
+        }
+
+        $params['filter_tags'] = $this->tagModel->getAllByProject($project['id']);
 
         if ($mode === GridModel::MODE_GANTT) {
             $params += $this->getGanttParams($project, $view);
