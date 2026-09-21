@@ -105,6 +105,9 @@ class ProjectCreationController extends BaseController
             'name' => $values['name'],
             'is_private' => $values['is_private'],
             'identifier' => $values['identifier'],
+            // Airframe type (MC/FW/HI). The project code is generated from
+            // it, so it has to survive this whitelist to reach the model.
+            'project_type' => array_key_exists('project_type', $values) ? $values['project_type'] : '',
             'description' => array_key_exists('description', $values) ? $values['description'] : '',
             'start_date' => array_key_exists('start_date', $values) ? $values['start_date'] : '',
             'end_date' => array_key_exists('end_date', $values) ? $values['end_date'] : '',

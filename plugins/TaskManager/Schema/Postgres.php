@@ -4,7 +4,7 @@ namespace Kanboard\Plugin\TaskManager\Schema;
 
 use PDO;
 
-const VERSION = 8;
+const VERSION = 9;
 
 function version_1(PDO $pdo)
 {
@@ -203,4 +203,17 @@ function version_8(PDO $pdo)
     // reads the same way it does on a task. Both are plain timestamps, 0 when
     // unset, matching how date_due is already stored.
     $pdo->exec("ALTER TABLE subtasks ADD COLUMN date_started INTEGER DEFAULT 0");
+}
+
+function version_9(PDO $pdo)
+{
+    /* Airframe type: MC (MultiCopter), FW (FixedWing), HI (HybridAircraft).
+       It is what the project code is built from - MC01, MC02, FW01 - so it is
+       stored rather than parsed back out of the code, which would break the
+       moment someone typed a code by hand. Existing projects keep their random
+       four-character codes and an empty type; nothing is rewritten, because a
+       code already printed on a document or pasted into a link has to keep
+       meaning the same project. */
+    $pdo->exec("ALTER TABLE projects ADD COLUMN project_type VARCHAR(2) DEFAULT ''");
+    $pdo->exec("CREATE INDEX projects_type_idx ON projects(project_type)");
 }

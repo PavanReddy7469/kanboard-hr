@@ -1452,6 +1452,18 @@
     background: var(--sb-amber);
 }
 
+/* The hidden attribute is how these are opened and closed, and a class rule
+   that sets `display` silently beats it: `hidden` only carries the browser's
+   own `display: none`, which any author rule outranks. Without these the panel
+   stood open over the table on every page load and Cancel did nothing, and
+   every filter section rendered expanded while its caret still pointed right.
+   .zs-menu below already had this guard; these three were missed. */
+.zf-panel[hidden],
+.zf-rowbody[hidden],
+.zp-menu-list[hidden] {
+    display: none;
+}
+
 .zf-overlay {
     position: fixed;
     inset: 0;

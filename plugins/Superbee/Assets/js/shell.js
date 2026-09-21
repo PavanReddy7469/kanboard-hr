@@ -550,4 +550,54 @@
         }
     });
 
+    /* ------------------------------------------------------------------
+       Aircraft type -> project code, on the project creation form.
+
+       Picking a type fills in the next free code for it. The code field stays
+       editable, and once someone has typed their own the dropdown stops
+       overwriting it - changing the type would otherwise quietly throw away
+       a number they had entered on purpose.
+
+       This is a convenience, not the rule. The code is settled again on the
+       server when the row is written, so two people creating a MultiCopter at
+       the same moment both see MC03 here and the second one is saved as MC04.
+    ------------------------------------------------------------------ */
+
+    function nextCodes(select) {
+        var host = select.closest('[data-sb-nextcodes]');
+        if (!host) { return {}; }
+        try { return JSON.parse(host.getAttribute('data-sb-nextcodes')) || {}; }
+        catch (err) { return {}; }
+    }
+
+    function isGeneratedCode(value, codes) {
+        if (value === '') { return true; }
+        for (var key in codes) {
+            if (codes.hasOwnProperty(key) && codes[key] === value) { return true; }
+        }
+        return false;
+    }
+
+    on('change', '[data-sb-projecttype]', function () {
+        var field = document.querySelector('[data-sb-projectcode]');
+        if (!field) { return; }
+
+        var codes = nextCodes(this);
+        var current = field.value.trim().toUpperCase();
+
+        // Only ever replace a value this script put there, or an empty box.
+        if (!isGeneratedCode(current, codes)) { return; }
+
+        var next = codes[this.value];
+
+        /* No code means the type has run out of two-digit numbers. Saying so
+           beats silently leaving the box empty and letting the server hand
+           back something random. */
+        field.value = next || '';
+        field.placeholder = this.value === ''
+            ? 'Choose a type first'
+            : (next ? next : 'All 99 numbers for this type are used - enter a code');
+    });
+
+
 }());

@@ -12,10 +12,23 @@
             <?= $this->form->text('name', $values, $errors, array('autofocus', 'required', 'placeholder' => t('e.g. SUPERBEE Drone Defense System'), 'maxlength="255"')) ?>
         </div>
 
-        <div style="margin-bottom: 16px;">
-            <?= $this->form->label(t('Project Code (4-digit alphanumeric)'), 'identifier', array('style' => 'font-weight: 700; color: #0f172a; margin-bottom: 6px;')) ?>
-            <?= $this->form->text('identifier', $values, $errors, array('placeholder' => t('Auto-generated if left blank (e.g. SB03)'), 'maxlength="4"', 'style' => 'text-transform: uppercase; font-family: monospace; font-weight: 700;')) ?>
-            <p class="form-help"><?= t('Unique 4-digit alphanumeric identifier for this project. If left empty, one will be generated automatically.') ?></p>
+        <?php /* Type and code sit together because one produces the other:
+                 pick MultiCopter and the code becomes the next free MC number.
+                 The code stays editable - a project imported from elsewhere may
+                 already have a number - but it is checked against the type and
+                 against every code already issued before it is accepted. */ ?>
+        <div style="display: grid; grid-template-columns: 240px 1fr; gap: 16px; margin-bottom: 16px;"
+             data-sb-nextcodes='<?= json_encode($this->projectCode->getNextCodes(), JSON_HEX_APOS) ?>'>
+            <div>
+                <?= $this->form->label(t('Aircraft Type'), 'project_type', array('style' => 'font-weight: 700; color: #0f172a; margin-bottom: 6px;')) ?>
+                <?= $this->form->select('project_type', $this->projectCode->getTypeOptions(), $values, $errors, array('required', 'data-sb-projecttype'), 'sb-type-select') ?>
+                <p class="form-help"><?= t('Decides the code prefix: MC, FW or HI.') ?></p>
+            </div>
+            <div>
+                <?= $this->form->label(t('Project Code'), 'identifier', array('style' => 'font-weight: 700; color: #0f172a; margin-bottom: 6px;')) ?>
+                <?= $this->form->text('identifier', $values, $errors, array('placeholder' => t('Choose a type first'), 'maxlength="4"', 'data-sb-projectcode', 'style' => 'text-transform: uppercase; font-family: monospace; font-weight: 700;')) ?>
+                <p class="form-help"><?= t('Filled in for you as the next free number for the type - MC01, MC02, FW01. Type over it only if this project already has a number; a code another project holds is refused.') ?></p>
+            </div>
         </div>
 
         <div style="margin-bottom: 16px;">

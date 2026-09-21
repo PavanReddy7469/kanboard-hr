@@ -21,6 +21,11 @@ class Plugin extends Base
         $this->helper->register('dashboard', '\Kanboard\Plugin\TaskManager\Helper\DashboardHelper');
         $this->helper->register('deliverable', '\Kanboard\Plugin\TaskManager\Helper\DeliverableHelper');
 
+        /* Feeds the aircraft-type dropdown and the next-code preview on the
+           project creation form, so that form reads a helper instead of core's
+           ProjectCreationController growing another responsibility. */
+        $this->helper->register('projectCode', '\Kanboard\Plugin\TaskManager\Helper\ProjectCodeHelper');
+
         /* Replaces core's 'user' helper so a person reads as "NAME (EMP ID)".
            UserModel::prepareList() builds every user dropdown through
            getFullname(), so overriding here reaches task owner, assignee,
@@ -115,6 +120,11 @@ class Plugin extends Base
             // TaskCreationModel and TaskModificationModel refuse dates in the
             // past. Overriding the models rather than the validators catches
             // the Gantt drag, the bulk tools and the API as well as the forms.
+            /* Adds the airframe-type rules on top of core's project
+               validation: the type has to be chosen, and a code typed by
+               hand has to match it. */
+            'Plugin\TaskManager\Validator' => array('ProjectValidator'),
+
             'Plugin\TaskManager\Model' => array('ProjectModel', 'TaskStatusModel', 'TaskCreationModel', 'TaskModificationModel', 'SubtaskModel', 'MilestoneModel', 'TaskListModel', 'DependencyModel', 'TimesheetModel', 'TimeEntryModel', 'RoleSeedModel', 'DashboardModel', 'GridModel', 'DeliverableModel'),
         );
     }
