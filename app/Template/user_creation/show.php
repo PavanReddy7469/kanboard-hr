@@ -1,3 +1,27 @@
+<?php
+/* Onboarding default.
+ *
+ * When config.php defines DEFAULT_USER_PASSWORD, the two password boxes open
+ * already filled with it, so onboarding is: name, email, role, Create. The
+ * admin can still type something else over it.
+ *
+ * The value itself lives only in config.php, which git ignores and does not
+ * track - it is deliberately not written into any file under version control,
+ * and not into this template. If the constant is absent the form behaves
+ * exactly as before and the field is required.
+ *
+ * Worth knowing: a default shared by everyone is only as good as how quickly
+ * it gets replaced. Kanboard has no forced change at first login, so until
+ * one is added, every account keeps this password until its owner changes it.
+ */
+$sb_values = $values;
+
+if (defined('DEFAULT_USER_PASSWORD') && DEFAULT_USER_PASSWORD !== ''
+    && empty($sb_values['password']) && empty($sb_values['confirmation'])) {
+    $sb_values['password']     = DEFAULT_USER_PASSWORD;
+    $sb_values['confirmation'] = DEFAULT_USER_PASSWORD;
+}
+?>
 <div class="page-header" style="margin-bottom: 20px;">
     <h2 style="font-size: 1.2rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
         <span style="width: 32px; height: 32px; border-radius: 8px; background: #e0e7ff; color: #4338ca; display: inline-flex; align-items: center; justify-content: center; font-size: 1rem;">
@@ -71,15 +95,22 @@
                 <label for="form-password" style="display: block; font-size: 0.84rem; font-weight: 700; color: #334155; margin-bottom: 6px;">
                     <?= t('Password') ?> <span style="color: #ef4444;">*</span>
                 </label>
-                <?= $this->form->password('password', $values, $errors, array('placeholder="••••••••"', 'style' => 'width: 100%; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; outline: none; background: #ffffff;')) ?>
+                <?= $this->form->password('password', $sb_values, $errors, array('placeholder="••••••••"', 'style' => 'width: 100%; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; outline: none; background: #ffffff;')) ?>
             </div>
             <div>
                 <label for="form-confirmation" style="display: block; font-size: 0.84rem; font-weight: 700; color: #334155; margin-bottom: 6px;">
                     <?= t('Confirm Password') ?> <span style="color: #ef4444;">*</span>
                 </label>
-                <?= $this->form->password('confirmation', $values, $errors, array('placeholder="••••••••"', 'style' => 'width: 100%; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; outline: none; background: #ffffff;')) ?>
+                <?= $this->form->password('confirmation', $sb_values, $errors, array('placeholder="••••••••"', 'style' => 'width: 100%; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; outline: none; background: #ffffff;')) ?>
             </div>
         </div>
+
+        <?php if (defined('DEFAULT_USER_PASSWORD') && DEFAULT_USER_PASSWORD !== ''): ?>
+            <p style="font-size: 0.78rem; color: #92400e; background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 8px 12px; margin: -6px 0 16px;">
+                <i class="fa fa-info-circle"></i>
+                <?= t('Filled in with the onboarding default. Ask the new user to change it the first time they sign in - everyone issued this password shares it until they do.') ?>
+            </p>
+        <?php endif ?>
 
         <!-- Row 4: Initial Project Assignment -->
         <?php if (! empty($projects)): ?>
