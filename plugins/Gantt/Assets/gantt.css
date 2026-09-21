@@ -132,20 +132,22 @@ div.ganttview-slide-container {
 /* ---- Two-tier header ---- */
 div.ganttview-hzheader {
     display:flex; flex-direction:column;
+    height:56px; box-sizing:border-box;
     background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
     border-bottom: 1.5px solid #cbd5e1;
+    position:relative; z-index:4;
 }
 .ganttview-hzheader-months, .ganttview-hzheader-days,
 .ganttview-hzheader-top, .ganttview-hzheader-sub { display:flex; }
 
-.ganttview-hzheader-top { height:27px; border-bottom:1px solid #cbd5e1; }
-.ganttview-hzheader-sub { height:27px; }
+.ganttview-hzheader-top { height:28px; border-bottom:1px solid #cbd5e1; box-sizing:border-box; }
+.ganttview-hzheader-sub { height:28px; box-sizing:border-box; }
 
 .hz-cell-top {
     display:flex; align-items:center; justify-content:center;
     border-right:1px solid #cbd5e1; box-sizing:border-box;
     font-size:.76rem; font-weight:800; color:#334155; text-transform:uppercase;
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 4px;
+    text-overflow:ellipsis; white-space:nowrap; padding:0 4px;
 }
 .hz-cell-sub {
     display:flex; align-items:center; justify-content:center;
@@ -167,17 +169,38 @@ div.ganttview-hzheader-day {
 
 /* ---- Grid ---- */
 div.ganttview-grid { float:left; }
-div.ganttview-grid-row { clear:both; }
+/* Floated cells left the row itself 0px tall, so there were no horizontal
+   rules between rows - just a field of vertical lines. Flex gives the row
+   the same 70px the bar lane uses. */
+div.ganttview-grid-row { display:flex; height:70px; }
 div.ganttview-grid-row-cell {
-    float:left; height:70px; border-right:1px solid #f1f5f9; border-bottom:1px solid #f1f5f9;
+    flex:none; height:70px; border-right:1px solid #f1f5f9; border-bottom:1px solid #e2e8f0;
     box-sizing:border-box;
 }
 div.ganttview-grid-row-cell.ganttview-weekend { background:#fafbfc; }
 div.ganttview-grid-row-cell.ganttview-today { background:#fefce8; }
 
 /* ---- Task Bars ---- */
-div.ganttview-blocks { margin-top:54px; }
-div.ganttview-block-container { height:70px; position:relative; padding-top:16px; }
+/* The bar lane and the task-name column have to advance by the same amount
+   per row or the two drift apart. This box was 70px tall with 16px of
+   top padding under content-box sizing - 86px in practice against the
+   name column's 70px - so by the fourth row a bar sat a full row below
+   its own label. */
+/* The grid is floated and the bar lane was not, so the lane started below
+   the header and was then pushed a further 56px down by its own margin -
+   every bar sat 58px below the task it belonged to, which at a 70px row
+   pitch reads as the next row's bar. Taking the lane out of flow and
+   pinning it over the grid is what actually makes the two line up. */
+div.ganttview-blocks {
+    position:absolute; top:56px; left:0; right:0;
+    margin-top:0; z-index:2;
+    pointer-events:none;
+}
+div.ganttview-block-container {
+    height:70px; box-sizing:border-box;
+    position:relative; padding-top:22px;
+}
+div.ganttview-block { pointer-events:auto; }
 div.ganttview-block {
     position:relative; height:22px; margin-top:2px;
     border-radius:6px; background:#6366f1; border:1px solid #4f46e5;
@@ -233,7 +256,7 @@ div.ganttview-block.is-critical-path .zg-bar-sub-name { color:#b91c1c !important
 div.ganttview-block div.ui-resizable-handle.ui-resizable-s { bottom:0; }
 
 /* Marker lines (Today / Est Completion) from old chart.js — keep compat */
-div.zg-marker { position:absolute; width:2px; z-index:8; pointer-events:none; top:54px; bottom:0; }
+div.zg-marker { position:absolute; width:2px; z-index:8; pointer-events:none; top:56px; bottom:0; }
 div.zg-marker.is-today { border-left:2px dashed #f59e0b; }
 div.zg-marker.is-est { border-left:2px dashed #475569; }
 span.zg-marker-label {
@@ -248,3 +271,121 @@ div.zg-marker.is-est span.zg-marker-label { background:#f1f5f9; color:#334155; b
 
 /* Last-child borders */
 div.ganttview-grid-row-cell.last, div.ganttview-hzheader-day.last, div.ganttview-hzheader-month.last { border-right:none; }
+
+/* ==================================================================
+   Readability pass: sticky period labels, month boundaries, and bar
+   labels that stay inside their own row.
+   ================================================================== */
+
+/* A year cell is 3650px wide and a quarter cell 900px. Centring the text
+   inside one puts the label far outside the viewport, which is why the
+   year row read as empty at the Years scale. The label is its own sticky
+   element, so it rides along the left edge for as long as its period is
+   on screen and stops at the cell's far edge. */
+/* No overflow:hidden here: an overflow other than visible makes the cell
+   its own scroll container, and a sticky label inside one sticks to the
+   cell instead of to the viewport - which is to say, it does nothing. */
+.hz-cell-top {
+    justify-content: flex-start;
+    position: relative;
+}
+
+.hz-cell-label {
+    position: sticky;
+    left: 10px;
+    white-space: nowrap;
+    padding-right: 10px;
+}
+
+/* A day column has nothing to slide, so centre those. A quarter or month
+   column in the sub row is hundreds of pixels wide and needs the same
+   sticky label the top row uses, or its name sits off screen. */
+.hz-cell-sub { justify-content: center; }
+.hz-cell-sub.is-wide {
+    justify-content: flex-start;
+    position: relative;
+    /* Same reason as .hz-cell-top: any overflow but visible makes this its
+       own scroll container and the sticky label inside stops sticking. */
+    overflow: visible;
+}
+.hz-cell-sub.is-wide .hz-cell-label { left: 10px; }
+
+/* ---- Month boundaries -------------------------------------------- */
+/* Without this the Months scale ran 1..30 then straight into 1..5 of the
+   next month with nothing between them, and the Weeks scale gave no hint
+   of where a month ended at all. */
+.hz-cell-sub.is-monthstart,
+div.ganttview-grid-row-cell.is-monthstart {
+    border-left: 2px solid #94a3b8;
+}
+
+.hz-cell-sub.is-monthstart {
+    color: #0f172a;
+    font-weight: 800;
+    background: #e2e8f0;
+}
+
+/* ---- Weekend and today, in the header as well as the grid --------- */
+.hz-cell-sub.is-weekend { background: rgba(148, 163, 184, .18); color: #475569; }
+
+.hz-cell-sub.is-today {
+    background: #f59e0b;
+    color: #1f2937;
+    font-weight: 800;
+}
+
+div.ganttview-grid-row-cell.ganttview-today { background: #fef3c7; }
+
+/* ---- Bar labels stay in their lane -------------------------------- */
+/* The date line above and the task name below are absolutely positioned
+   off the bar, so with rows only 70px tall they used to spill into the
+   neighbouring row and collide with its bar. Capping them keeps each
+   row's three lines - dates, bar, name - inside that row. */
+.zg-bar-floating-label {
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    bottom: calc(100% + 3px);
+}
+
+/* Beside the bar, vertically centred on it - never below. Below put the
+   caption level with the next row's task, so it named the wrong work. */
+.zg-bar-sub-name {
+    top: 50%;
+    left: calc(100% + 8px);
+    transform: translateY(-50%);
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* A bar's own labels belong above its neighbours' bars, never under. */
+div.ganttview-block-container { z-index: 1; }
+div.ganttview-block-container:hover { z-index: 3; }
+
+/* ---- Narrow scales ------------------------------------------------ */
+/* At Years a day is 10px wide: per-day vertical rules become a grey haze
+   and the weekend shading turns the whole chart into stripes. Only the
+   month dividers survive at that density. */
+.zgantt-scale-years div.ganttview-grid-row-cell {
+    border-right: 0;
+}
+
+.zgantt-scale-years div.ganttview-grid-row-cell.ganttview-weekend,
+.zgantt-scale-quarters div.ganttview-grid-row-cell.ganttview-weekend {
+    background: transparent;
+}
+
+.zgantt-scale-years .hz-cell-sub.is-weekend,
+.zgantt-scale-quarters .hz-cell-sub.is-weekend {
+    background: transparent;
+}
+
+
+/* The task name now rides on the bar itself when there is room for it.
+   TaskManager's stylesheet hides .ganttview-block-text, which is loaded
+   after this file, so this has to out-specify it rather than merely
+   follow it. */
+#gantt-chart div.ganttview-block .ganttview-block-text {
+    display: flex !important;
+}

@@ -71,11 +71,21 @@ Gantt.prototype.show = function() {
     var chart = jQuery("<div>", {"class": "ganttview"});
     chart.append(this.renderVerticalHeader());
     chart.append(this.renderSlider(startDate, endDate));
-    container.empty().append(chart);
+
+    /* The scale drives more than cell width: at 10px a day, per-day rules
+       and weekend shading turn the chart into a grey haze, so the
+       stylesheet switches those off by scale rather than by guessing. */
+    container
+        .removeClass("zgantt-scale-years zgantt-scale-quarters zgantt-scale-months zgantt-scale-weeks")
+        .addClass("zgantt-scale-" + this.options.scale)
+        .empty().append(chart);
 
     /* Layout markers after the chart is in the DOM */
     var self = this;
-    window.requestAnimationFrame(function(){ self.layoutMarkers(container); });
+    window.requestAnimationFrame(function(){
+        self.layoutMarkers(container);
+        self.scrollToFocus(container, startDate);
+    });
     window.setTimeout(function(){ self.layoutMarkers(container); }, 250);
 
     jQuery("div.ganttview-grid-row div.ganttview-grid-row-cell:last-child", container).addClass("last");
@@ -123,22 +133,31 @@ Gantt.prototype.getDateRange = function(minDays) {
         if (e > max) max = new Date(e);
     }
 
+    /* Today belongs on the chart whatever the tasks say - a plan that has
+       drifted into the past is exactly when you need to see where today is. */
+    var today = new Date(); today.setHours(0,0,0,0);
+    if (today < min) { min = new Date(today); }
+    if (today > max) { max = new Date(today); }
+
     if (this.options.scale === 'years') {
         // Encompass full year(s) Jan 1 to Dec 31
         min = new Date(min.getFullYear(), 0, 1);
         max = new Date(max.getFullYear(), 11, 31);
     } else if (this.options.scale === 'quarters') {
-        // Align to start of quarter and end of quarter
+        /* A quarter on its own reads as a wall of days with no before or
+           after. One quarter of padding either side is what makes it a
+           timeline: you can see what ran up to this work and what follows. */
         var startQ = Math.floor(min.getMonth() / 3);
-        min = new Date(min.getFullYear(), startQ * 3, 1);
+        min = new Date(min.getFullYear(), (startQ - 1) * 3, 1);
         var endQ = Math.floor(max.getMonth() / 3);
-        max = new Date(max.getFullYear(), (endQ + 1) * 3, 0);
+        max = new Date(max.getFullYear(), (endQ + 2) * 3, 0);
         if (this.daysBetween(min, max) < minDays) {
             max = this.addDays(new Date(min), minDays);
         }
     } else if (this.options.scale === 'months') {
-        // Align to 1st of month
-        min = new Date(min.getFullYear(), min.getMonth(), 1);
+        // Align to the 1st, and keep a month of context on each side.
+        min = new Date(min.getFullYear(), min.getMonth() - 1, 1);
+        max = new Date(max.getFullYear(), max.getMonth() + 2, 0);
         if (this.daysBetween(min, max) < minDays) {
             max = this.addDays(new Date(min), minDays);
         }
@@ -146,7 +165,9 @@ Gantt.prototype.getDateRange = function(minDays) {
         // Align to Monday of start week
         var dow = min.getDay();
         var diffToMon = (dow === 0 ? -6 : 1 - dow);
-        min = this.addDays(new Date(min), diffToMon);
+        min = this.addDays(new Date(min), diffToMon - 7);
+        var edow = max.getDay();
+        max = this.addDays(new Date(max), (edow === 0 ? 0 : 7 - edow) + 7);
         if (this.daysBetween(min, max) < minDays) {
             max = this.addDays(new Date(min), minDays);
         }
@@ -237,6 +258,7 @@ Gantt.prototype.renderSlider = function(startDate, endDate) {
 /*  Header: 4 scales (Years / Quarters / Months / Weeks)               */
 /* ------------------------------------------------------------------ */
 Gantt.prototype.renderHorizontalHeader = function(dates) {
+    var self  = this;
     var hdr   = jQuery("<div>",{"class":"ganttview-hzheader"});
     var scale = this.options.scale || 'quarters';
     var cw    = this.options.cellWidth;
@@ -251,7 +273,7 @@ Gantt.prototype.renderHorizontalHeader = function(dates) {
             for (var m in dates[y]) yDays += dates[y][m].length;
             var yw = yDays * cw;
             totalW += yw;
-            topR.append(jQuery("<div>",{"class":"hz-cell-top","css":{"width":yw+"px"}}).text(y));
+            topR.append(jQuery("<div>",{"class":"hz-cell-top","css":{"width":yw+"px"}}).append(self.hzLabel(y)));
 
             /* Quarters within this year */
             var qDays = {1:0, 2:0, 3:0, 4:0};
@@ -262,7 +284,7 @@ Gantt.prototype.renderHorizontalHeader = function(dates) {
             for (var qi = 1; qi <= 4; qi++) {
                 if (qDays[qi] > 0) {
                     var qw = qDays[qi] * cw;
-                    subR.append(jQuery("<div>",{"class":"hz-cell-sub","css":{"width":qw+"px"}}).text("Q"+qi));
+                    subR.append(jQuery("<div>",{"class":"hz-cell-sub is-wide","css":{"width":qw+"px"}}).append(self.hzLabel("Q"+qi)));
                 }
             }
         }
@@ -286,10 +308,10 @@ Gantt.prototype.renderHorizontalHeader = function(dates) {
                 for (var mi = 0; mi < qMap[qi].length; mi++) {
                     var mw = qMap[qi][mi].days * cw;
                     qw += mw;
-                    subR.append(jQuery("<div>",{"class":"hz-cell-sub","css":{"width":mw+"px"}}).text(SM[qMap[qi][mi].m]));
+                    subR.append(jQuery("<div>",{"class":"hz-cell-sub is-wide","css":{"width":mw+"px"}}).append(self.hzLabel(SM[qMap[qi][mi].m])));
                 }
                 totalW += qw;
-                topR.append(jQuery("<div>",{"class":"hz-cell-top","css":{"width":qw+"px"}}).text("Q"+qi+" '"+y));
+                topR.append(jQuery("<div>",{"class":"hz-cell-top","css":{"width":qw+"px"}}).append(self.hzLabel("Q"+qi+" '"+y)));
             }
         }
         topR.css("width", totalW+"px");
@@ -304,9 +326,14 @@ Gantt.prototype.renderHorizontalHeader = function(dates) {
             for (var m in dates[y]) {
                 var mw = dates[y][m].length * cw;
                 totalW += mw;
-                topR.append(jQuery("<div>",{"class":"hz-cell-top","css":{"width":mw+"px"}}).text(FM[m]+' '+y));
+                topR.append(jQuery("<div>",{"class":"hz-cell-top","css":{"width":mw+"px"}}).append(self.hzLabel(FM[m]+' '+y)));
                 for (var d in dates[y][m]) {
-                    subR.append(jQuery("<div>",{"class":"hz-cell-sub","css":{"width":cw+"px"}}).text(dates[y][m][d].getDate()));
+                    var dObj = dates[y][m][d];
+                    var cls = "hz-cell-sub";
+                    if (dObj.getDate() === 1) { cls += " is-monthstart"; }
+                    if (self.isWeekend(dObj)) { cls += " is-weekend"; }
+                    if (self.isToday(dObj))   { cls += " is-today"; }
+                    subR.append(jQuery("<div>",{"class":cls,"css":{"width":cw+"px"}}).text(dObj.getDate()));
                 }
             }
         }
@@ -334,12 +361,16 @@ Gantt.prototype.renderHorizontalHeader = function(dates) {
             totalW += bw;
             var wn = this.isoWeek(bands[b].from);
             var lbl = 'W' + wn + ' · ' + bands[b].from.getDate() + ' ' + WSM[bands[b].from.getMonth()] + ' - ' + bands[b].to.getDate() + ' ' + WSM[bands[b].to.getMonth()] + ', ' + bands[b].to.getFullYear();
-            topR.append(jQuery("<div>",{"class":"hz-cell-top","css":{"width":bw+"px"}}).text(lbl));
+            topR.append(jQuery("<div>",{"class":"hz-cell-top","css":{"width":bw+"px"}}).append(self.hzLabel(lbl)));
         }
         for (var i = 0; i < allDates.length; i++) {
             var dObj = allDates[i];
             var dayTxt = DN[dObj.getDay()] + ' ' + dObj.getDate();
-            subR.append(jQuery("<div>",{"class":"hz-cell-sub","css":{"width":cw+"px"}}).text(dayTxt));
+            var cls = "hz-cell-sub";
+            if (dObj.getDate() === 1) { cls += " is-monthstart"; }
+            if (self.isWeekend(dObj)) { cls += " is-weekend"; }
+            if (self.isToday(dObj))   { cls += " is-today"; }
+            subR.append(jQuery("<div>",{"class":cls,"css":{"width":cw+"px"}}).text(dayTxt));
         }
         topR.css("width", totalW+"px");
         subR.css("width", totalW+"px");
@@ -358,6 +389,54 @@ Gantt.prototype.isoWeek = function(d) {
 };
 
 /* ------------------------------------------------------------------ */
+/*  Header label that survives scrolling                               */
+/* ------------------------------------------------------------------ */
+/* A year cell is 3650px wide and a quarter cell 900px. Centring text in
+   one of those puts the label thousands of pixels from wherever you are
+   looking, which is why the year row read as blank. The label is its own
+   sticky element instead, so "2026" stays on screen for as long as 2026
+   does. */
+Gantt.prototype.hzLabel = function(text) {
+    return jQuery("<span>", {"class": "hz-cell-label"}).text(text);
+};
+
+/* ------------------------------------------------------------------ */
+/*  Scroll to where the work actually is                               */
+/* ------------------------------------------------------------------ */
+/* At the year scale the chart is 3650px wide and the bars sit in
+   September - around x=2900. Left at its default scroll position the
+   viewport shows January, which is empty, and the chart looks broken.
+   This puts today (or the first bar, if today is off the chart) a little
+   in from the left edge. */
+Gantt.prototype.scrollToFocus = function(container, startDate) {
+    /* The element that actually scrolls is the slide container - the
+       outer #gantt-chart never overflows, so scrolling it does nothing. */
+    var scroller = container.find(".ganttview-slide-container").first();
+    if (!scroller.length) { scroller = container; }
+
+    var el = scroller.get(0);
+    if (!el || el.scrollWidth <= el.clientWidth) { return; }
+
+    var focus = new Date(); focus.setHours(0, 0, 0, 0);
+    var start = new Date(startDate); start.setHours(0, 0, 0, 0);
+
+    var earliest = null;
+    for (var i = 0; i < this.data.length; i++) {
+        var d = this.data[i].start;
+        if (d && (!earliest || d < earliest)) { earliest = new Date(d); }
+    }
+    if (earliest && earliest < focus) { focus = earliest; }
+
+    var days = this.daysBetween(start, focus);
+    if (days <= 0) { return; }
+
+    /* A margin of a few cells so the focus is not jammed against the
+       vertical header. */
+    var left = (days * this.options.cellWidth) - (this.options.cellWidth * 3);
+    el.scrollLeft = Math.max(0, left);
+};
+
+/* ------------------------------------------------------------------ */
 /*  Grid                                                               */
 /* ------------------------------------------------------------------ */
 Gantt.prototype.renderGrid = function(dates) {
@@ -366,6 +445,7 @@ Gantt.prototype.renderGrid = function(dates) {
     var cw   = this.options.cellWidth;
     for (var y in dates) for (var m in dates[y]) for (var d in dates[y][m]) {
         var cell = jQuery("<div>",{"class":"ganttview-grid-row-cell","css":{"width":cw+"px"}});
+        if (dates[y][m][d].getDate() === 1) cell.addClass("is-monthstart");
         if (this.options.showWeekends && this.isWeekend(dates[y][m][d])) cell.addClass("ganttview-weekend");
         if (this.options.showToday && this.isToday(dates[y][m][d])) cell.addClass("ganttview-today");
         row.append(cell);
@@ -414,20 +494,24 @@ Gantt.prototype.addBlocks = function(slider, start) {
             }
         }).append(textDiv);
 
-        /* Bar text */
-        if (s.type === 'task' && size >= 2) {
-            var label = s.progress + ' #' + s.id;
-            if (size >= 5) label += ' ' + s.title;
-            textDiv.text(label);
+        /* The name goes ON the bar when the bar is wide enough to hold it,
+           and just after its right edge when it is not. It used to hang
+           below the bar, which at a 70px row pitch put it level with the
+           NEXT row's task - so every caption named the wrong row. */
+        var nameFits = barW >= 90;
+
+        if (s.type === 'task' && nameFits) {
+            textDiv.text(s.progress + ' · ' + s.title);
+        } else if (s.type === 'task' && size >= 2) {
+            textDiv.text(s.progress);
         }
 
-        /* Floating meta label above bar: date range | assignee */
+        /* Meta line above the bar: date range | assignee */
         var dRange = this.fmtDate(s.start) + ' - ' + this.fmtDate(s.end);
         if (s.assignee) dRange += ' | ' + s.assignee;
         block.append(jQuery("<div>",{"class":"zg-bar-floating-label"}).text(dRange));
 
-        /* Sub label below: task name */
-        if (s.type === 'task') {
+        if (s.type === 'task' && ! nameFits) {
             block.append(jQuery("<div>",{"class":"zg-bar-sub-name"}).text(s.title));
         }
 

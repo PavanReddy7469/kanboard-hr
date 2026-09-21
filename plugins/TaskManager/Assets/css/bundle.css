@@ -1848,7 +1848,9 @@ html body a.sb-deliv-act.is-reject:hover  { background: #ffe4e6; border-color: #
 .zgantt-vthead {
     display: flex;
     align-items: center;
-    height: 52px;
+    /* Must equal the chart's own two-tier header (28 + 28), or the task
+       names start four pixels above the bars they label. */
+    height: 56px;
     padding: 0 10px;
     box-sizing: border-box;
     gap: 10px;
