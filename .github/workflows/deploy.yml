@@ -1,0 +1,28 @@
+name: Deploy Kanboard-HR
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/kanboard-hr
+            git fetch origin
+            git reset --hard origin/master
+            git clean -fd
+            sed -i 's|# RewriteBase /|RewriteBase /kanboard/|g' .htaccess
+            sudo chown -R www-data:www-data /var/www/kanboard-hr
+            sudo find /var/www/kanboard-hr -type f -exec chmod 644 {} \;
+            sudo find /var/www/kanboard-hr -type d -exec chmod 755 {} \;
+            sudo chmod -R 775 /var/www/kanboard-hr/data
+            echo "Kanboard deployment complete!"
