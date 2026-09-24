@@ -8,6 +8,7 @@ use Kanboard\Middleware\ApplicationAuthorizationMiddleware;
 use Kanboard\Middleware\AuthenticationMiddleware;
 use Kanboard\Middleware\BootstrapMiddleware;
 use Kanboard\Middleware\PostAuthenticationMiddleware;
+use Kanboard\Plugin\TaskManager\Middleware\PasswordChangeMiddleware;
 use Kanboard\Middleware\ProjectAuthorizationMiddleware;
 use RuntimeException;
 
@@ -56,7 +57,16 @@ class Runner extends Base
 
         $bootstrapMiddleware->setNextMiddleware($authenticationMiddleware);
         $authenticationMiddleware->setNextMiddleware($postAuthenticationMiddleware);
-        $postAuthenticationMiddleware->setNextMiddleware($appAuthorizationMiddleware);
+        /* SUPERBEE: accounts are onboarded with a shared default password.
+           This holds the user on the change-password screen until they have
+           set one of their own - after two-factor, so the gate cannot be used
+           to skip it, and before authorization, so no other page loads first.
+           Kanboard builds this chain in code with no hook to extend it, which
+           is why the line lives here rather than in the plugin. */
+        $passwordChangeMiddleware = new PasswordChangeMiddleware($this->container);
+
+        $postAuthenticationMiddleware->setNextMiddleware($passwordChangeMiddleware);
+        $passwordChangeMiddleware->setNextMiddleware($appAuthorizationMiddleware);
         $appAuthorizationMiddleware->setNextMiddleware($projectAuthorizationMiddleware);
 
         $bootstrapMiddleware->execute();

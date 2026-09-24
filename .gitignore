@@ -24,6 +24,7 @@ mysql/*.sql
 # Scratch and throwaway working directories.
 scratch/
 _to_delete/
+_sb_tokens.php
 
 # Backups and archives left by editing sessions.
 *.bak

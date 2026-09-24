@@ -4,7 +4,7 @@ namespace Kanboard\Plugin\TaskManager\Schema;
 
 use PDO;
 
-const VERSION = 9;
+const VERSION = 10;
 
 function version_1(PDO $pdo)
 {
@@ -216,4 +216,17 @@ function version_9(PDO $pdo)
        meaning the same project. */
     $pdo->exec("ALTER TABLE projects ADD COLUMN project_type VARCHAR(2) DEFAULT ''");
     $pdo->exec("CREATE INDEX projects_type_idx ON projects(project_type)");
+}
+
+function version_10(PDO $pdo)
+{
+    /* Set when an account is created, or when an administrator resets
+       somebody's password; cleared the moment that person sets one of their
+       own. Everyone issued the onboarding default shares it until they change
+       it, and nothing in Kanboard made them - this is what makes them.
+
+       Existing accounts default to 0: they already chose their passwords, and
+       locking the current users out of their own instance to prove a point
+       would be a poor trade. */
+    $pdo->exec("ALTER TABLE users ADD COLUMN must_change_password SMALLINT NOT NULL DEFAULT 0");
 }
