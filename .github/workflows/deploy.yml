@@ -25,4 +25,6 @@ jobs:
             sudo find /var/www/kanboard-hr -type f -exec chmod 644 {} \;
             sudo find /var/www/kanboard-hr -type d -exec chmod 755 {} \;
             sudo chmod -R 775 /var/www/kanboard-hr/data
+            sudo systemctl reload apache2 || true
+            sudo systemctl reload php8.1-fpm || sudo systemctl reload php8.2-fpm || sudo systemctl reload php8.3-fpm || sudo systemctl reload php8.4-fpm || true
             echo "Kanboard deployment complete!"
