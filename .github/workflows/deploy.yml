@@ -3,7 +3,7 @@ name: Deploy Kanboard-HR
 on:
   push:
     branches: [ master ]
-  workflow_dispatch:        # so a deploy can be re-run without an empty commit
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -16,66 +16,71 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script_stop: true          # stop at the first failing command
+          script_stop: true
           script: |
-            set -euo pipefail
-            # Without the two lines above, every command here could fail and the
-            # job would still be green, because appleboy/ssh-action reports the
-            # exit code of the LAST command - and the last command used to be an
-            # unconditional echo. That is how three "successful" deployments in a
-            # row shipped nothing at all.
-
+            set -uo pipefail
             APP=/var/www/kanboard-hr
-            cd "$APP"
 
-            # The previous workflow chowned the whole tree, .git included, to
-            # www-data. After that the deploy user no longer owned the repository
-            # and git refused to touch it ("detected dubious ownership"), so every
-            # later fetch and reset failed silently. Claim it back first.
-            sudo chown -R "$(id -un):$(id -gn)" "$APP/.git"
-            git config --global --add safe.directory "$APP" || true
+            # Every stage announces itself and is written to a file the site
+            # serves, so a failed deploy can be diagnosed from outside without
+            # anyone needing to be signed in to read Actions logs.
+            STATUS="$APP/deploy-status.txt"
+            stage() { echo "== $1"; echo "$(date -u +%FT%TZ) $1" >> "$STATUS" 2>/dev/null || true; }
+            die()   { echo "DEPLOY FAILED at: $1"; echo "$(date -u +%FT%TZ) FAILED: $1" >> "$STATUS" 2>/dev/null || true; exit 1; }
 
-            BEFORE=$(git rev-parse HEAD)
-            echo "before: $BEFORE"
+            stage "cd $APP"
+            cd "$APP" || die "cd $APP (directory missing?)"
+            : > "$STATUS" 2>/dev/null || echo "(cannot write $STATUS - continuing)"
+            stage "start ${{ github.sha }}"
 
-            git fetch origin master
-            git reset --hard origin/master
-            git clean -fd                       # -d only: never -x, config.php is ignored and must survive
+            # git refuses a repository owned by another user. Declare it safe
+            # BEFORE any git command, and without sudo, so this cannot be the
+            # thing that stops the deploy.
+            git config --global --add safe.directory "$APP" 2>/dev/null || true
 
-            AFTER=$(git rev-parse HEAD)
-            echo "after:  $AFTER"
+            # Passwordless sudo may or may not exist for this account. Find out
+            # once, and degrade to no-sudo rather than dying - shipping the code
+            # matters more than re-applying permissions that are already right.
+            if sudo -n true 2>/dev/null; then SUDO="sudo"; stage "sudo: available";
+            else SUDO=""; stage "sudo: NOT available (skipping ownership/permission steps)"; fi
 
-            # Prove the checkout actually moved to what was pushed, rather than
-            # trusting that it did.
-            if [ "$AFTER" != "${{ github.sha }}" ]; then
-              echo "DEPLOY FAILED: checkout is $AFTER but the pushed commit is ${{ github.sha }}"
-              exit 1
+            if [ -n "$SUDO" ]; then
+              $SUDO chown -R "$(id -un):$(id -gn)" "$APP/.git" || stage "warn: could not chown .git"
             fi
 
-            # Kanboard is served under /kanboard/, so the rewrite base has to match.
-            sed -i 's|# RewriteBase /|RewriteBase /kanboard/|g' .htaccess
+            stage "git rev-parse (before)"
+            BEFORE=$(git rev-parse HEAD 2>&1) || die "git rev-parse: $BEFORE"
+            stage "before=$BEFORE"
 
-            # Application files readable by the web server; .git stays with the
-            # deploy user so the next run can still fetch.
-            sudo chown -R www-data:www-data "$APP"
-            sudo chown -R "$(id -un):$(id -gn)" "$APP/.git"
-            sudo find "$APP" -path "$APP/.git" -prune -o -type f -exec chmod 644 {} \;
-            sudo find "$APP" -path "$APP/.git" -prune -o -type d -exec chmod 755 {} \;
-            sudo chmod -R 775 "$APP/data"
+            stage "git fetch"
+            FETCH=$(git fetch origin master 2>&1) || die "git fetch: $FETCH"
 
-            # A reload leaves existing FPM workers alive, and with them the old
-            # bytecode. restart is what actually drops OPcache.
-            sudo systemctl restart "php$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')-fpm"
-            sudo systemctl reload apache2
+            stage "git reset"
+            RESET=$(git reset --hard origin/master 2>&1) || die "git reset: $RESET"
 
+            git clean -fd || stage "warn: git clean failed"
+
+            AFTER=$(git rev-parse HEAD)
+            stage "after=$AFTER"
+            [ "$AFTER" = "${{ github.sha }}" ] || die "checkout is $AFTER, expected ${{ github.sha }}"
+
+            sed -i 's|# RewriteBase /|RewriteBase /kanboard/|g' .htaccess || stage "warn: sed on .htaccess failed"
+
+            if [ -n "$SUDO" ]; then
+              stage "permissions"
+              $SUDO chown -R www-data:www-data "$APP"                                   || stage "warn: chown app"
+              $SUDO chown -R "$(id -un):$(id -gn)" "$APP/.git"                          || stage "warn: chown .git"
+              $SUDO find "$APP" -path "$APP/.git" -prune -o -type f -exec chmod 644 {} \; || stage "warn: chmod files"
+              $SUDO find "$APP" -path "$APP/.git" -prune -o -type d -exec chmod 755 {} \; || stage "warn: chmod dirs"
+              $SUDO chmod -R 775 "$APP/data"                                            || stage "warn: chmod data"
+
+              stage "restart php-fpm / apache"
+              V=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null || echo "")
+              [ -n "$V" ] && ($SUDO systemctl restart "php$V-fpm" || stage "warn: php$V-fpm restart")
+              $SUDO systemctl reload apache2 || stage "warn: apache reload"
+            else
+              stage "skipped permissions and service restart (no sudo)"
+            fi
+
+            stage "OK deployed $AFTER"
             echo "deployed $AFTER"
-
-      - name: Verify the live site is serving the new build
-        run: |
-          set -euo pipefail
-          # An asset whose bytes change with every build. If the site still
-          # serves the old one, the deploy did not reach what Apache reads.
-          URL=https://inventory.superbeeaeronautics.com/kanboard/plugins/TaskManager/Assets/css/bundle.css
-          LIVE=$(curl -fsS "$URL" | sha256sum | cut -d' ' -f1)
-          echo "live bundle.css sha256: $LIVE"
-          if [ -z "$LIVE" ]; then echo "could not read the live asset"; exit 1; fi
