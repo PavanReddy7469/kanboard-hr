@@ -374,8 +374,30 @@
     background: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
     box-shadow: 0 20px 30px -5px rgba(15, 23, 42, 0.15), 0 10px 15px -5px rgba(15, 23, 42, 0.08) !important;
-    overflow: hidden !important;
+    /* Kanboard sets max-height with overflow:auto so a tall modal scrolls.
+       This rule used to say `hidden` - added to keep content inside the 16px
+       radius - which removed the scrollbar while leaving the height cap in
+       place. Everything past the cap was simply cut off and unreachable: on
+       the New Project form that was the Create button. `auto` clips to the
+       radius exactly the same way, and scrolls. */
+    overflow: auto !important;
+    /* Kanboard's own calc(100% - 30px) is measured from top:2%, so the modal
+       could extend about 2% below the viewport. Leave a real margin instead. */
+    max-height: 92vh !important;
     font-family: var(--sb-font) !important;
+}
+
+/* Keep the action buttons in reach on a long form rather than making people
+   scroll to the bottom to find out there was a Save. */
+#modal-box .form-actions {
+    position: sticky !important;
+    bottom: 0 !important;
+    background: #ffffff !important;
+    padding-top: 14px !important;
+    padding-bottom: 14px !important;
+    margin-top: 8px !important;
+    border-top: 1px solid #e2e8f0 !important;
+    z-index: 2 !important;
 }
 
 #modal-box .page-header,
