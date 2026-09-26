@@ -552,7 +552,11 @@ class GridModel extends Base
     }
 
     /**
-     * 4-digit alphanumeric code for a task.
+     * A task's code, as PROJECTCODE-NNN: MC01-001, MC01-002, FW02-001.
+     *
+     * Never truncated. It used to be cut to four characters, which suited the
+     * random code Kanboard generates and would now reduce every task in a
+     * project to the project's own code.
      *
      * @param  array $task
      * @return string
@@ -564,7 +568,7 @@ class GridModel extends Base
         }
 
         if (! empty($task['reference'])) {
-            return strtoupper(substr($task['reference'], 0, 4));
+            return strtoupper($task['reference']);
         }
 
         return sprintf('T%03d', $task['id']);

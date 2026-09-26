@@ -77,7 +77,7 @@ class TaskGanttFormatter extends BaseFormatter implements FormatterInterface
             'link' => $this->helper->url->href('TaskViewController', 'show', array('project_id' => $task['project_id'], 'task_id' => $task['id'])),
             'panel_url' => $this->helper->url->href('TaskPanelController', 'show', array('plugin' => 'TaskManager', 'task_id' => $task['id'], 'project_id' => $task['project_id'])),
             'project_id' => $task['project_id'],
-            'code' => ! empty($task['reference']) ? strtoupper(substr($task['reference'], 0, 4)) : sprintf('T%03d', $task['id']),
+            'code' => ! empty($task['reference']) ? strtoupper($task['reference']) : sprintf('T%03d', $task['id']),
             'priority' => (int) $task['priority'],
             'is_critical' => (int) $task['priority'] === 1,
             'color' => $this->colorModel->getColorProperties($task['color_id']),

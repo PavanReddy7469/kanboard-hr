@@ -83,7 +83,7 @@ class TaskCalendarFormatter extends BaseFormatter implements FormatterInterface
             $allDay = $startDate == $endDate && $endDate->format('Hi') == '0000';
             $format = $allDay ? 'Y-m-d' : 'Y-m-d\TH:i:s';
 
-            $tCode = ! empty($task['reference']) ? strtoupper(substr($task['reference'], 0, 4)) : sprintf('T%03d', $task['id']);
+            $tCode = ! empty($task['reference']) ? strtoupper($task['reference']) : sprintf('T%03d', $task['id']);
 
             $events[] = array(
                 'timezoneParam' => $this->timezoneModel->getCurrentTimezone(),

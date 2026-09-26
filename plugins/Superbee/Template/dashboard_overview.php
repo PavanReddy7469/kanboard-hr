@@ -83,7 +83,7 @@ if (! empty($portfolio['projects'])) {
                         <?php foreach ($tasksList as $task): ?>
                             <?php
                                 // Task Code
-                                $tCode = ! empty($task['reference']) ? strtoupper(substr($task['reference'], 0, 4)) : sprintf('T%03d', $task['id']);
+                                $tCode = ! empty($task['reference']) ? strtoupper($task['reference']) : sprintf('T%03d', $task['id']);
 
                                 // Priority
                                 $pNum = ! empty($task['priority']) ? (int)$task['priority'] : 0;

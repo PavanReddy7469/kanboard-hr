@@ -125,7 +125,7 @@ class Plugin extends Base
                hand has to match it. */
             'Plugin\TaskManager\Validator' => array('ProjectValidator'),
 
-            'Plugin\TaskManager\Model' => array('ProjectModel', 'UserModel', 'TaskStatusModel', 'TaskCreationModel', 'TaskModificationModel', 'SubtaskModel', 'MilestoneModel', 'TaskListModel', 'DependencyModel', 'TimesheetModel', 'TimeEntryModel', 'RoleSeedModel', 'DashboardModel', 'GridModel', 'DeliverableModel'),
+            'Plugin\TaskManager\Model' => array('ProjectModel', 'UserModel', 'TaskDuplicationModel', 'TaskStatusModel', 'TaskCreationModel', 'TaskModificationModel', 'SubtaskModel', 'MilestoneModel', 'TaskListModel', 'DependencyModel', 'TimesheetModel', 'TimeEntryModel', 'RoleSeedModel', 'DashboardModel', 'GridModel', 'DeliverableModel'),
         );
     }
 

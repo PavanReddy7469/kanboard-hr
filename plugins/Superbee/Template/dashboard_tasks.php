@@ -191,7 +191,7 @@ foreach ($projectsGrouped as $pg) {
                                         <!-- ID -->
                                         <td style="padding: 12px 18px;">
                                             <span style="font-family: monospace; font-size: 0.84rem; font-weight: 700; color: #4338ca; background: #e0e7ff; padding: 2px 7px; border-radius: 6px;">
-                                                #<?= $this->text->e(! empty($t['reference']) ? strtoupper(substr($t['reference'], 0, 4)) : sprintf('T%03d', $t['id'])) ?>
+                                                #<?= $this->text->e(! empty($t['reference']) ? strtoupper($t['reference']) : sprintf('T%03d', $t['id'])) ?>
                                             </span>
                                         </td>
 

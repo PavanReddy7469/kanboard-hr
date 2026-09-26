@@ -19,7 +19,7 @@
     <?php foreach ($paginator->getCollection() as $task): ?>
         <?php
             $code = ! empty($task['reference'])
-                ? strtoupper(substr($task['reference'], 0, 4))
+                ? strtoupper($task['reference'])
                 : sprintf('T%03d', $task['id']);
 
             /* The search query aliases the column as column_name; other task

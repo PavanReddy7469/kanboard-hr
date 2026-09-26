@@ -203,6 +203,10 @@
     font-size: 11px;
     font-weight: 700;
     color: var(--sb-600);
+    /* Codes read MC01-001 now rather than 4JY8. The column is width:1%, so it
+       sizes to its content - this just stops the code breaking across two
+       lines while it does. */
+    white-space: nowrap;
 }
 
 .zg-col-name,
