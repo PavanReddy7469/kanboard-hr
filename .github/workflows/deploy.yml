@@ -3,6 +3,7 @@ name: Deploy Kanboard-HR
 on:
   push:
     branches: [ master ]
+  workflow_dispatch:        # so a deploy can be re-run without an empty commit
 
 jobs:
   deploy:
@@ -15,16 +16,66 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true          # stop at the first failing command
           script: |
-            cd /var/www/kanboard-hr
-            git fetch origin
+            set -euo pipefail
+            # Without the two lines above, every command here could fail and the
+            # job would still be green, because appleboy/ssh-action reports the
+            # exit code of the LAST command - and the last command used to be an
+            # unconditional echo. That is how three "successful" deployments in a
+            # row shipped nothing at all.
+
+            APP=/var/www/kanboard-hr
+            cd "$APP"
+
+            # The previous workflow chowned the whole tree, .git included, to
+            # www-data. After that the deploy user no longer owned the repository
+            # and git refused to touch it ("detected dubious ownership"), so every
+            # later fetch and reset failed silently. Claim it back first.
+            sudo chown -R "$(id -un):$(id -gn)" "$APP/.git"
+            git config --global --add safe.directory "$APP" || true
+
+            BEFORE=$(git rev-parse HEAD)
+            echo "before: $BEFORE"
+
+            git fetch origin master
             git reset --hard origin/master
-            git clean -fd
+            git clean -fd                       # -d only: never -x, config.php is ignored and must survive
+
+            AFTER=$(git rev-parse HEAD)
+            echo "after:  $AFTER"
+
+            # Prove the checkout actually moved to what was pushed, rather than
+            # trusting that it did.
+            if [ "$AFTER" != "${{ github.sha }}" ]; then
+              echo "DEPLOY FAILED: checkout is $AFTER but the pushed commit is ${{ github.sha }}"
+              exit 1
+            fi
+
+            # Kanboard is served under /kanboard/, so the rewrite base has to match.
             sed -i 's|# RewriteBase /|RewriteBase /kanboard/|g' .htaccess
-            sudo chown -R www-data:www-data /var/www/kanboard-hr
-            sudo find /var/www/kanboard-hr -type f -exec chmod 644 {} \;
-            sudo find /var/www/kanboard-hr -type d -exec chmod 755 {} \;
-            sudo chmod -R 775 /var/www/kanboard-hr/data
-            sudo systemctl reload apache2 || true
-            sudo systemctl reload php8.1-fpm || sudo systemctl reload php8.2-fpm || sudo systemctl reload php8.3-fpm || sudo systemctl reload php8.4-fpm || true
-            echo "Kanboard deployment complete!"
+
+            # Application files readable by the web server; .git stays with the
+            # deploy user so the next run can still fetch.
+            sudo chown -R www-data:www-data "$APP"
+            sudo chown -R "$(id -un):$(id -gn)" "$APP/.git"
+            sudo find "$APP" -path "$APP/.git" -prune -o -type f -exec chmod 644 {} \;
+            sudo find "$APP" -path "$APP/.git" -prune -o -type d -exec chmod 755 {} \;
+            sudo chmod -R 775 "$APP/data"
+
+            # A reload leaves existing FPM workers alive, and with them the old
+            # bytecode. restart is what actually drops OPcache.
+            sudo systemctl restart "php$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')-fpm"
+            sudo systemctl reload apache2
+
+            echo "deployed $AFTER"
+
+      - name: Verify the live site is serving the new build
+        run: |
+          set -euo pipefail
+          # An asset whose bytes change with every build. If the site still
+          # serves the old one, the deploy did not reach what Apache reads.
+          URL=https://inventory.superbeeaeronautics.com/kanboard/plugins/TaskManager/Assets/css/bundle.css
+          LIVE=$(curl -fsS "$URL" | sha256sum | cut -d' ' -f1)
+          echo "live bundle.css sha256: $LIVE"
+          if [ -z "$LIVE" ]; then echo "could not read the live asset"; exit 1; fi

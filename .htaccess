@@ -1,3 +1,32 @@
+# ---------------------------------------------------------------------------
+# Nothing here is application content, and the rewrite rule below only routes
+# requests that do NOT match a real file - so a real file like .git/config or
+# a .sql dump is handed straight to the client by Apache. On the live server
+# https://<host>/kanboard/.git/config was downloadable, which is enough for
+# anyone to clone the entire repository and its history.
+# ---------------------------------------------------------------------------
+
+# The repository itself. RedirectMatch is used rather than <DirectoryMatch>
+# because <Directory> and <DirectoryMatch> are only legal in the server config
+# or a vhost - putting either in a .htaccess file makes Apache return 500 for
+# every request, which would take the whole site down instead of protecting it.
+<IfModule mod_alias.c>
+    RedirectMatch 404 /\.git(/|$)
+</IfModule>
+
+# Dumps, logs, databases, editor leftovers, and any copy of config.php that
+# does not end in .php - that suffix is what stops it being executed and makes
+# it readable as plain text.
+<FilesMatch "(^\.|\.(sql|sqlite|sqlite-wal|sqlite-shm|db|log|bak|old|orig|swp|env|ini|dist|yml|yaml|lock|md|sh)$|^config\.php\.)">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
 # Pass HTTP Authorization header via environment variable to PHP backend
 # to make HTTP Basic Authentication work for Apache/FastCGI/php-fpm
 # setups (required to authenticate over the API)
