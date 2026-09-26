@@ -44,8 +44,15 @@ jobs:
             if sudo -n true 2>/dev/null; then SUDO="sudo"; stage "sudo: available";
             else SUDO=""; stage "sudo: NOT available (skipping ownership/permission steps)"; fi
 
+            # git reset --hard rewrites the WORKING TREE, not just .git. The
+            # tree is owned by www-data, so every unlink and mkdir was refused
+            # and the reset aborted - taking back .git alone was not enough.
+            # Own the whole thing for the duration of the deploy; ownership is
+            # handed back below, in a shape that does not break the next run.
             if [ -n "$SUDO" ]; then
-              $SUDO chown -R "$(id -un):$(id -gn)" "$APP/.git" || stage "warn: could not chown .git"
+              $SUDO chown -R "$(id -un):$(id -gn)" "$APP" || die "chown $APP"
+            else
+              stage "no sudo: git reset will fail if the tree is not owned by $(id -un)"
             fi
 
             stage "git rev-parse (before)"
@@ -68,11 +75,19 @@ jobs:
 
             if [ -n "$SUDO" ]; then
               stage "permissions"
-              $SUDO chown -R www-data:www-data "$APP"                                   || stage "warn: chown app"
-              $SUDO chown -R "$(id -un):$(id -gn)" "$APP/.git"                          || stage "warn: chown .git"
-              $SUDO find "$APP" -path "$APP/.git" -prune -o -type f -exec chmod 644 {} \; || stage "warn: chmod files"
-              $SUDO find "$APP" -path "$APP/.git" -prune -o -type d -exec chmod 755 {} \; || stage "warn: chmod dirs"
-              $SUDO chmod -R 775 "$APP/data"                                            || stage "warn: chmod data"
+              # The deploy user OWNS the tree and Apache reads it through the
+              # www-data group. The original workflow gave the whole directory
+              # to www-data, which is precisely what locked the deploy out of
+              # it and cost thirteen commits' worth of releases.
+              $SUDO chown -R "$(id -un):www-data" "$APP"                                || stage "warn: chown app"
+              $SUDO find "$APP" -path "$APP/.git" -prune -o -type d -exec chmod 2750 {} \; || stage "warn: chmod dirs"
+              $SUDO find "$APP" -path "$APP/.git" -prune -o -type f -exec chmod 640 {} \;  || stage "warn: chmod files"
+              # Kanboard writes uploads, cache and sessions here as www-data.
+              $SUDO chmod -R 2770 "$APP/data"                                           || stage "warn: chmod data"
+              # Apache has no business reading .git at all. Owner-only here
+              # means the repository stays unreadable over HTTP even if the
+              # .htaccess rule is ever lost.
+              $SUDO chmod -R 700 "$APP/.git"                                            || stage "warn: chmod .git"
 
               stage "restart php-fpm / apache"
               V=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null || echo "")
