@@ -1,9 +1,12 @@
 <?php
-$treeData  = $this->taskTree->getProjectTree($project['id']);
-$isLead    = $this->taskTree->canManageTasks($project['id']);
-$assignees = $this->taskTree->getAssigneeList($project['id']);
-$nbTasks   = 0;
-foreach ($treeData as $_m) { $nbTasks += $_m['nb_rows']; }
+$filters    = $this->taskTree->getFilters();
+$isFiltered = $this->taskTree->hasFilters($filters);
+$treeData   = $this->taskTree->getProjectTree($project['id'], $filters);
+$isLead     = $this->taskTree->canManageTasks($project['id']);
+$assignees  = $this->taskTree->getAssigneeList($project['id']);
+$filterRoute = $this->taskTree->getFilterRoute();
+$nbTasks    = $this->taskTree->countTasks($treeData);
+$statuses   = array('open' => t('Open'), 'wip' => t('WIP'), 'rev' => t('Rev'), 'closed' => t('Closed'));
 ?>
 <div class="taskmanager-container">
     <div class="taskmanager-header">
@@ -26,16 +29,22 @@ foreach ($treeData as $_m) { $nbTasks += $_m['nb_rows']; }
 
     <div class="taskmanager-filterbar">
         <form method="get" action="<?= $this->url->dir() ?>" class="tm-filter-form">
-            <input type="hidden" name="controller" value="ProjectOverviewController">
-            <input type="hidden" name="action" value="show">
-            <input type="hidden" name="project_id" value="<?= $project['id'] ?>">
+            <?php /* The route comes from the router, so the form posts back
+                     to whichever page is rendering this partial. Hard-coding
+                     it sent the Task Tree's filter to a different page. */ ?>
+            <?php foreach ($filterRoute as $field => $value): ?>
+                <input type="hidden" name="<?= $field ?>" value="<?= $this->text->e($value) ?>">
+            <?php endforeach ?>
 
             <div class="filter-group">
                 <label for="tm-assignee-filter"><i class="fa fa-filter text-indigo"></i> <?= t('Assignee') ?>:</label>
                 <select id="tm-assignee-filter" name="assignee_filter" data-zg-submit>
                     <option value=""><?= t('All Members &amp; Engineers') ?></option>
+                    <option value="nobody"<?= $filters['assignee'] === 'nobody' ? ' selected' : '' ?>><?= t('Unassigned') ?></option>
                     <?php foreach ($assignees as $userId => $userName): ?>
-                        <option value="<?= $userId ?>"><?= $this->text->e($userName) ?></option>
+                        <option value="<?= (int) $userId ?>"<?= $filters['assignee'] !== '' && (int) $filters['assignee'] === (int) $userId ? ' selected' : '' ?>>
+                            <?= $this->text->e($userName) ?>
+                        </option>
                     <?php endforeach ?>
                 </select>
             </div>
@@ -44,10 +53,9 @@ foreach ($treeData as $_m) { $nbTasks += $_m['nb_rows']; }
                 <label for="tm-status-filter"><i class="fa fa-tasks text-indigo"></i> <?= t('Status') ?>:</label>
                 <select id="tm-status-filter" name="status_filter" data-zg-submit>
                     <option value=""><?= t('All Statuses') ?></option>
-                    <option value="Open">Open</option>
-                    <option value="WIP">WIP</option>
-                    <option value="Rev">Rev</option>
-                    <option value="Closed">Closed</option>
+                    <?php foreach ($statuses as $value => $label): ?>
+                        <option value="<?= $value ?>"<?= $filters['status'] === $value ? ' selected' : '' ?>><?= $this->text->e($label) ?></option>
+                    <?php endforeach ?>
                 </select>
             </div>
 
@@ -67,12 +75,26 @@ foreach ($treeData as $_m) { $nbTasks += $_m['nb_rows']; }
         </form>
     </div>
 
+    <?php if ($isFiltered): ?>
+        <p class="tm-filter-summary">
+            <i class="fa fa-filter"></i>
+            <?= t('Showing %d task(s) that match the filter. The assignee filter covers subtasks too.', $nbTasks) ?>
+            <a href="<?= $this->url->href($filterRoute['controller'], $filterRoute['action'], array_diff_key($filterRoute, array('controller' => 1, 'action' => 1))) ?>">
+                <?= t('Clear') ?>
+            </a>
+        </p>
+    <?php endif ?>
+
     <div class="tree-table-wrapper">
         <?php if ($nbTasks === 0): ?>
             <p class="alert alert-info">
                 <i class="fa fa-info-circle"></i>
-                <?= t('Nothing in this project yet.') ?>
-                <?php if ($isLead): ?><?= t('Start with a milestone, then add task lists and tasks underneath it.') ?><?php endif ?>
+                <?php if ($isFiltered): ?>
+                    <?= t('No task matches this filter.') ?>
+                <?php else: ?>
+                    <?= t('Nothing in this project yet.') ?>
+                    <?php if ($isLead): ?><?= t('Start with a milestone, then add task lists and tasks underneath it.') ?><?php endif ?>
+                <?php endif ?>
             </p>
         <?php else: ?>
             <table class="tree-table">

@@ -841,3 +841,36 @@
     max-width: 460px;
     margin: 0 auto 20px;
 }
+
+/* The line above the tree when a filter is on: what is being shown, and
+   the way back out. Without it a filtered tree is indistinguishable from
+   a project that has lost its tasks. */
+
+.tm-filter-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    padding: 8px 14px;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 8px;
+    color: #3730a3;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.tm-filter-summary i {
+    color: #4338ca;
+}
+
+.tm-filter-summary a {
+    margin-left: auto;
+    color: #4338ca;
+    text-decoration: underline;
+    font-weight: 700;
+}
+
+.tm-filter-summary a:hover {
+    color: #312e81;
+}
