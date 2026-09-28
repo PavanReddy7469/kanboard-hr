@@ -5,6 +5,7 @@ namespace Kanboard\Plugin\TaskManager;
 use Kanboard\Core\Plugin\Base;
 use Kanboard\Plugin\TaskManager\Action\FlagOverdueTask;
 use Kanboard\Plugin\TaskManager\Action\PriorityEscalation;
+use Kanboard\Plugin\TaskManager\Subscriber\PrioritySubscriber;
 use Kanboard\Plugin\TaskManager\Subscriber\RescheduleSubscriber;
 
 class Plugin extends Base
@@ -83,6 +84,14 @@ class Plugin extends Base
         // Successor rescheduling — off unless a project switches it on
         $this->dispatcher->addSubscriber(new RescheduleSubscriber($this->container));
 
+        /* Priority gap-closing — off unless a project switches it on, and the
+           switch is the PriorityEscalation action below. Kanboard binds an
+           action to one event, so covering every change through actions alone
+           would mean adding the same one five times and still missing
+           deletion. This listens once; it does nothing where the action is
+           not configured. */
+        $this->dispatcher->addSubscriber(new PrioritySubscriber($this->container));
+
         // Workflow rules. These show up in Project settings > Automatic
         // actions, so each project decides whether it wants them; priority
         // escalation used to be an always-on, invisible subscriber.
@@ -136,7 +145,11 @@ class Plugin extends Base
                hand has to match it. */
             'Plugin\TaskManager\Validator' => array('ProjectValidator'),
 
-            'Plugin\TaskManager\Model' => array('ProjectModel', 'UserModel', 'TaskDuplicationModel', 'TaskStatusModel', 'TaskCreationModel', 'TaskModificationModel', 'SubtaskModel', 'MilestoneModel', 'TaskListModel', 'DependencyModel', 'TimesheetModel', 'TimeEntryModel', 'RoleSeedModel', 'DashboardModel', 'GridModel', 'DeliverableModel'),
+            /* TaskModel overrides core's for one reason: deleting a task
+               fires no event, so it is the only way to close the hole a
+               delete leaves in the priority queue. PriorityModel holds that
+               renumbering, shared with the automatic action. */
+            'Plugin\TaskManager\Model' => array('ProjectModel', 'UserModel', 'TaskModel', 'PriorityModel', 'TaskDuplicationModel', 'TaskStatusModel', 'TaskCreationModel', 'TaskModificationModel', 'SubtaskModel', 'MilestoneModel', 'TaskListModel', 'DependencyModel', 'TimesheetModel', 'TimeEntryModel', 'RoleSeedModel', 'DashboardModel', 'GridModel', 'DeliverableModel'),
         );
     }
 
