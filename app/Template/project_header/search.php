@@ -20,15 +20,13 @@
 
         <input type="hidden" name="search" id="form-search" value="<?= isset($filters['search']) ? $this->text->e($filters['search']) : '' ?>" />
 
-        <?php /* Opens the filter panel rendered by the Tasks grid. The button
-                 is inert on views that do not render one, which is deliberate -
-                 better than a menu of presets that half-apply. */ ?>
-        <a href="#" class="zf-open" data-zf-open title="<?= t('Filter') ?>">
-            <i class="fa fa-filter" aria-hidden="true"></i>
-            <span><?= t('Filter') ?></span>
-            <?php if (! empty($filters['search'])): ?>
-                <span class="zf-open-dot" title="<?= t('A filter is applied') ?>"></span>
-            <?php endif ?>
-        </a>
+        <?php /* The visible Filter button now lives in the Tasks grid toolbar,
+                 next to the display-type picker - the two controls that decide
+                 what the table shows belong side by side. It is gone from here
+                 because this header is shared with Gantt and Calendar, where
+                 there is no filter panel for it to open.
+
+                 The hidden field above stays: it is cheap, and Kanboard's own
+                 scripts look for #form-search by id. */ ?>
     </form>
 </div>

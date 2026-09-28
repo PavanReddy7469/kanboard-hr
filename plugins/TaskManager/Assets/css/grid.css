@@ -1649,3 +1649,35 @@ body.zf-open { overflow: hidden; }
 .zf-panel .zf-rowbody input[type="date"] {
     padding: 7px 10px;
 }
+
+/* Filter, sitting in the grid toolbar beside the display-type picker. Matches
+   the picker's shape so the two read as one control group. */
+.zg-filter-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+    padding: 6px 12px;
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: #1e293b;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.zg-filter-trigger:hover {
+    border-color: var(--sb-navy);
+    color: var(--sb-navy);
+}
+
+.zg-filter-trigger .fa { color: #6366f1; }
+
+.zg-filter-trigger .zf-open-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--sb-amber);
+}

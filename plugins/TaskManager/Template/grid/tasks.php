@@ -37,13 +37,24 @@ $sortLink = function ($column, $label) use ($base, $order, $direction) {
                     <?php endforeach ?>
                 </ul>
             </div>
+
+            <?php /* Filter sits beside the display-type picker rather than up
+                     in the project header. They are the two controls that
+                     decide what this table shows, so they belong together -
+                     and the header is shared with Gantt and Calendar, where
+                     this button had nothing to open. */ ?>
+            <a href="#" class="zf-open zg-filter-trigger" data-zf-open title="<?= t('Filter') ?>">
+                <i class="fa fa-filter" aria-hidden="true"></i>
+                <span><?= t('Filter') ?></span>
+                <?php if (! empty($search)): ?>
+                    <span class="zf-open-dot" title="<?= t('A filter is applied') ?>"></span>
+                <?php endif ?>
+            </a>
         </div>
 
-        <div class="zg-toolbar-right" style="display: flex; align-items: center; gap: 10px;">
-            <?php if ($can_create): ?>
-                <span class="zg-btn-primary"><?= $this->modal->large('plus', t('Add Task'), 'TaskCreationController', 'show', array('project_id' => $project['id'])) ?></span>
-            <?php endif ?>
-        </div>
+        <?php /* The "Add Task" button that used to sit here duplicated the
+                 "+ Add Task" row at the top of the table below, which does the
+                 same job without leaving the list. */ ?>
     </div>
 
     <?php if ($mode === 'gantt'): ?>
