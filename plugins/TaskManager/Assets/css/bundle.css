@@ -629,6 +629,223 @@
 
 .milestone-table .progress-track { max-width: 160px; }
 
+/* ------------------------------------------------------------------
+   Task Lists page: a group header per list, its tasks underneath.
+
+   Folding reuses the project tree's script, so the rows carry .tree-row
+   and the header carries the toggle. Only the presentation is new.
+   ------------------------------------------------------------------ */
+
+.tm-tasklists .zg-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.tm-tasklists .zg-subtitle {
+    color: #64748b;
+    font-size: 0.88rem;
+    margin: 4px 0 0;
+}
+
+.tm-tasklists-panel {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.tm-tasklists-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tm-tasklists-table th {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.tm-tasklists-table td {
+    padding: 12px 16px;
+    font-size: 0.88rem;
+    color: #334155;
+    vertical-align: middle;
+}
+
+.tm-tasklists-table .tm-col-progress {
+    width: 200px;
+}
+
+.tm-tasklists-table .tm-right {
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* The group header. Tinted so the eye can find the boundary between one
+   list and the next without reading the names. */
+.tm-group-row > td {
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.tm-group-row strong {
+    font-size: 0.95rem;
+    color: #0f172a;
+}
+
+.tm-group-unfiled > td {
+    background: #fffbeb;
+    border-top-color: #fde68a;
+    border-bottom-color: #fde68a;
+}
+
+.tm-group-icon {
+    color: #6366f1;
+    margin: 0 6px 0 2px;
+}
+
+.tm-group-unfiled .tm-group-icon {
+    color: #b45309;
+}
+
+.tm-milestone-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #e0f2fe;
+    color: #0369a1;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+/* Task rows sit under their header, indented by one step. */
+.tm-task-row > td {
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.tm-task-row:hover > td {
+    background: #f8fafc;
+}
+
+.tm-indent {
+    display: inline-block;
+    width: 26px;
+}
+
+.tm-task-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #64748b;
+    background: #f1f5f9;
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-right: 8px;
+}
+
+/* A closed task stays legible but stops competing with open work. */
+.tm-task-row.is-closed .task-title-link {
+    color: #94a3b8;
+    text-decoration: line-through;
+}
+
+.tm-task-row.is-closed .tm-task-code {
+    color: #94a3b8;
+}
+
+.tm-task-empty td {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.tm-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tm-progress-track {
+    flex: 1;
+    height: 8px;
+    background: #f1f5f9;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.tm-progress-fill {
+    height: 100%;
+    background: #6366f1;
+    border-radius: 4px;
+}
+
+.tm-progress-fill.is-complete {
+    background: #10b981;
+}
+
+.tm-progress-value {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #475569;
+    width: 38px;
+    text-align: right;
+}
+
+.tm-row-actions {
+    display: inline-flex;
+    gap: 6px;
+}
+
+/* Empty state */
+.tm-empty-panel {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+}
+
+.tm-empty-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #e0e7ff;
+    color: #4338ca;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.tm-empty-icon i {
+    font-size: 1.6rem;
+}
+
+.tm-empty-panel h3 {
+    margin: 0 0 8px;
+    color: #0f172a;
+    font-size: 1.15rem;
+}
+
+.tm-empty-panel p {
+    color: #64748b;
+    font-size: 0.9rem;
+    max-width: 460px;
+    margin: 0 auto 20px;
+}
+
 /* ---- dashboard.css ---- */
 /* SUPERBEE project dashboard.
    Tokens come from plugins/Superbee/Assets/css/tokens.css; nothing here
