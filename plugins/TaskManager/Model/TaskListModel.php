@@ -87,16 +87,46 @@ class TaskListModel extends Base
     }
 
     /**
+     * Moving a list to another milestone takes its tasks with it.
+     *
+     * The overview finds a task at [milestone_id][task_list_id]. Leave the
+     * tasks behind on the old milestone and they are looked for under a list
+     * that is no longer there - every task in the list drops off the tree at
+     * once, with nothing on screen to say why. The two columns are one fact
+     * stored twice, so they move together or not at all.
+     *
      * @param  array $values
      * @return boolean
      */
     public function update(array $values)
     {
         $taskListId = (int) $values['id'];
-        $values = $this->prepare($values);
+        $existing   = $this->getById($taskListId);
+        $values     = $this->prepare($values);
         unset($values['project_id']);
 
-        return $this->db->table(self::TABLE)->eq('id', $taskListId)->update($values);
+        $milestoneChanged = ! empty($existing)
+            && array_key_exists('milestone_id', $values)
+            && (int) $existing['milestone_id'] !== (int) $values['milestone_id'];
+
+        if (! $milestoneChanged) {
+            return $this->db->table(self::TABLE)->eq('id', $taskListId)->update($values);
+        }
+
+        $this->db->startTransaction();
+
+        $result = $this->db->table(self::TABLE)->eq('id', $taskListId)->update($values);
+
+        if ($result) {
+            $this->db
+                ->table(TaskModel::TABLE)
+                ->eq('task_list_id', $taskListId)
+                ->update(array('milestone_id' => (int) $values['milestone_id']));
+        }
+
+        $this->db->closeTransaction();
+
+        return $result;
     }
 
     /**

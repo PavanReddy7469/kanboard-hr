@@ -26,6 +26,10 @@ class Plugin extends Base
            ProjectCreationController growing another responsibility. */
         $this->helper->register('projectCode', '\Kanboard\Plugin\TaskManager\Helper\ProjectCodeHelper');
 
+        /* Milestone and task-list options for the task form. A template
+           cannot reach a model, and the task form is core's. */
+        $this->helper->register('taskGrouping', '\Kanboard\Plugin\TaskManager\Helper\TaskGroupingHelper');
+
         /* Replaces core's 'user' helper so a person reads as "NAME (EMP ID)".
            UserModel::prepareList() builds every user dropdown through
            getFullname(), so overriding here reaches task owner, assignee,
@@ -55,6 +59,13 @@ class Plugin extends Base
         // Overriding the core template rather than appending to it, so the
         // strip is one coherent set instead of core's three plus ours.
         $this->template->setTemplateOverride('project_header/views', 'TaskManager:project_header/all_views');
+
+        /* Which milestone and which task list a task belongs to. The columns
+           have existed since version 2 of this plugin and the overview has
+           always read them, but until now nothing anywhere could set them,
+           so every task collected under "Unassigned". This one hook is
+           rendered by both the creation and the modification form. */
+        $this->template->hook->attach('template:task:form:second-column', 'TaskManager:task/form_grouping');
 
         // Typed dependencies panel on the task detail page
         $this->template->hook->attach('template:task:show:before-internal-links', 'TaskManager:task/dependencies');

@@ -38,6 +38,8 @@ class TaskTreeHelper extends Base
             $tree[] = $this->buildMilestoneNode($milestone, $listsByMilestone, $tasksByGroup);
         }
 
+        $this->sweepStrandedTasks($tasksByGroup, $milestones, $listsByMilestone);
+
         $orphan = $this->buildMilestoneNode(
             array(
                 'id'          => 0,
@@ -62,6 +64,96 @@ class TaskTreeHelper extends Base
         }
 
         return $tree;
+    }
+
+    /**
+     * Move into "Unassigned" any task no milestone node will render.
+     *
+     * The tree reaches for a task at [milestone_id][task_list_id]. A pair
+     * that names nothing on screen - a milestone that was archived, a list
+     * that was deleted or has since moved under a different milestone -
+     * matches no node, and the task is simply not drawn. The models now keep
+     * those two columns in step, but old rows predate that, and a direct
+     * database edit is not bound by it either.
+     *
+     * This is the backstop for the promise made at the top of this class:
+     * nothing falls out of the view. A task in the wrong group looks
+     * misfiled, which someone can fix; a task that is invisible looks
+     * deleted, which nobody thinks to fix.
+     *
+     * @param  array $tasksByGroup     Modified in place.
+     * @param  array $milestones       The milestone nodes actually rendered.
+     * @param  array $listsByMilestone
+     */
+    protected function sweepStrandedTasks(array &$tasksByGroup, array $milestones, array $listsByMilestone)
+    {
+        $rendered = array(0 => true);
+
+        foreach ($milestones as $milestone) {
+            $rendered[(int) $milestone['id']] = true;
+        }
+
+        /* The lists the "Unassigned" node will draw for itself. Tasks in
+           those are already accounted for and must not be swept up. */
+        $orphanLists = array();
+
+        if (isset($listsByMilestone[0])) {
+            foreach ($listsByMilestone[0] as $taskList) {
+                $orphanLists[(int) $taskList['id']] = true;
+            }
+        }
+
+        $stranded = array();
+
+        foreach ($tasksByGroup as $groupMilestoneId => $lists) {
+            $milestoneId = (int) $groupMilestoneId;
+
+            foreach ($lists as $groupListId => $tasks) {
+                $listId = (int) $groupListId;
+
+                if ($milestoneId === 0 && ($listId === 0 || isset($orphanLists[$listId]))) {
+                    continue;
+                }
+
+                if (isset($rendered[$milestoneId]) && $milestoneId !== 0) {
+                    /* buildMilestoneNode already drew this milestone. It
+                       consumed [id][0] and every list under it; anything
+                       else left here names a list that is not under it. */
+                    if ($listId === 0 || $this->listBelongsTo($listsByMilestone, $milestoneId, $listId)) {
+                        continue;
+                    }
+                }
+
+                $stranded = array_merge($stranded, $tasks);
+                unset($tasksByGroup[$milestoneId][$listId]);
+            }
+        }
+
+        if (! empty($stranded)) {
+            $existing = isset($tasksByGroup[0][0]) ? $tasksByGroup[0][0] : array();
+            $tasksByGroup[0][0] = array_merge($existing, $stranded);
+        }
+    }
+
+    /**
+     * @param  array   $listsByMilestone
+     * @param  integer $milestoneId
+     * @param  integer $listId
+     * @return boolean
+     */
+    protected function listBelongsTo(array $listsByMilestone, $milestoneId, $listId)
+    {
+        if (! isset($listsByMilestone[$milestoneId])) {
+            return false;
+        }
+
+        foreach ($listsByMilestone[$milestoneId] as $taskList) {
+            if ((int) $taskList['id'] === $listId) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -17,6 +17,7 @@ use Kanboard\Model\TaskModel;
 class TaskCreationModel extends \Kanboard\Model\TaskCreationModel
 {
     use NoBackdatingTrait;
+    use TaskGroupingTrait;
 
     /**
      * @param  array $values
@@ -40,6 +41,12 @@ class TaskCreationModel extends \Kanboard\Model\TaskCreationModel
         // field anyone gets to choose. Core stamps it in prepare(); drop any
         // value supplied by a caller so the API cannot pre-date a task.
         unset($values['date_creation'], $values['date_modification']);
+
+        /* Before the insert, not after: an id that failed the project check
+           has to become 0 rather than reach the row and then be corrected. */
+        if (! empty($values['project_id'])) {
+            $this->resolveGrouping($values, $values['project_id']);
+        }
 
         return parent::create($values);
     }

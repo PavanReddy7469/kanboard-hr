@@ -21,6 +21,7 @@ use Kanboard\Model\TaskModel;
 class TaskModificationModel extends \Kanboard\Model\TaskModificationModel
 {
     use NoBackdatingTrait;
+    use TaskGroupingTrait;
 
     /**
      * @param  array   $values
@@ -43,6 +44,13 @@ class TaskModificationModel extends \Kanboard\Model\TaskModificationModel
                 if (! empty($refused)) {
                     return $this->refuseBackdating($refused);
                 }
+
+                /* The project comes from the stored task, never from the
+                   request: a task cannot be moved between projects by
+                   editing it, so the posted ids are checked against the
+                   project the task is actually in. $existing also supplies
+                   whichever of the two ids this particular form left out. */
+                $this->resolveGrouping($values, $existing['project_id'], $existing);
             }
         }
 

@@ -28,5 +28,16 @@ class TaskDuplicationModel extends \Kanboard\Model\TaskDuplicationModel
         $this->fieldsToDuplicate = array_values(
             array_diff($this->fieldsToDuplicate, array('reference'))
         );
+
+        /* A copy belongs beside the task it was copied from, so it starts in
+           the same milestone and task list rather than falling into
+           "Unassigned" for someone to re-file by hand.
+           Duplicating into a different project is safe too: creation checks
+           both ids against the destination project and clears them when they
+           belong elsewhere. */
+        $this->fieldsToDuplicate = array_values(array_unique(array_merge(
+            $this->fieldsToDuplicate,
+            array('milestone_id', 'task_list_id')
+        )));
     }
 }
