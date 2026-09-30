@@ -80,7 +80,20 @@ class TaskGridController extends BaseController
             'scale'      => $scale,
             'can_create' => $this->helper->user->hasProjectAccess('TaskCreationController', 'show', $project['id']),
             'can_move'   => $this->helper->user->hasProjectAccess('BoardAjaxController', 'save', $project['id']),
+
+            /* Whether the Owner cell is a picker or just a name. A custom
+               project role can be barred from reassigning work, and the same
+               check runs again on the save - this only decides what the grid
+               offers. */
+            'can_assign' => $this->helper->user->hasProjectAccess('TaskModificationController', 'update', $project['id'])
+                && $this->helper->projectRole->canChangeAssignee(array('project_id' => $project['id'])),
         );
+
+        /* The Owner picker's list. "Unassigned" is first because taking a
+           task off somebody is as ordinary as giving it to them, and there
+           was no way to do it from this screen at all before. */
+        $params['assignable_users'] = array(0 => t('Unassigned'))
+            + $this->projectUserRoleModel->getAssignableUsersList($project['id'], false);
 
         list($params['columns'], $params['column_classes']) = $this->gridModel->getStatusOptions($project['id']);
 

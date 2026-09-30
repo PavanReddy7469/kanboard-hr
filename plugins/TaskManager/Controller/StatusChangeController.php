@@ -59,6 +59,105 @@ class StatusChangeController extends BaseController
     }
 
     /**
+     * Assign a task to somebody, from the grid.
+     *
+     * The same pill the status uses, pointed at a different field. The save
+     * goes through taskModificationModel rather than writing owner_id
+     * straight to the row, so the assignee-change event fires and whoever
+     * just picked up the work is told about it - which is most of the point
+     * of assigning it.
+     */
+    public function owner()
+    {
+        $task = $this->getTask();
+        $this->checkReusableGETCSRFParam();
+
+        $projectId = (int) $task['project_id'];
+        $ownerId   = $this->request->getIntegerParam('owner_id');
+
+        if (! $this->helper->projectRole->canUpdateTask($task)
+            || ! $this->helper->projectRole->canChangeAssignee($task)) {
+            throw new AccessForbiddenException(t("You don't have the permission to change the assignee"));
+        }
+
+        $users = $this->projectUserRoleModel->getAssignableUsersList($projectId, false);
+
+        /* 0 means unassigned, which is always allowed. Anyone else has to be
+           assignable on this project: the list in the menu is built from the
+           project, but the request is a URL and can say anything. */
+        if ($ownerId !== 0 && ! isset($users[$ownerId])) {
+            throw new AccessForbiddenException(t('That person cannot be assigned work on this project.'));
+        }
+
+        $saved = (int) $task['owner_id'] === $ownerId
+            ? true
+            : $this->taskModificationModel->update(array('id' => $task['id'], 'owner_id' => $ownerId));
+
+        if (! $saved) {
+            $this->response->status(400);
+            return;
+        }
+
+        $this->response->json($this->describeOwner($ownerId, $users));
+    }
+
+    /**
+     * The same, for a subtask - which carries its own assignee rather than
+     * inheriting the task's.
+     */
+    public function subtaskOwner()
+    {
+        $task = $this->getTask();
+        $this->checkReusableGETCSRFParam();
+
+        $subtaskId = $this->request->getIntegerParam('subtask_id');
+        $ownerId   = $this->request->getIntegerParam('owner_id');
+        $subtask   = $this->subtaskModel->getById($subtaskId);
+
+        if (empty($subtask) || (int) $subtask['task_id'] !== (int) $task['id']) {
+            throw new AccessForbiddenException(t('That subtask does not belong to this task.'));
+        }
+
+        if (! $this->helper->projectRole->canUpdateTask($task)
+            || ! $this->helper->projectRole->canChangeAssignee($task)) {
+            throw new AccessForbiddenException(t("You don't have the permission to change the assignee"));
+        }
+
+        $users = $this->projectUserRoleModel->getAssignableUsersList((int) $task['project_id'], false);
+
+        if ($ownerId !== 0 && ! isset($users[$ownerId])) {
+            throw new AccessForbiddenException(t('That person cannot be assigned work on this project.'));
+        }
+
+        $saved = (int) $subtask['user_id'] === $ownerId
+            ? true
+            : $this->subtaskModel->update(array('id' => $subtaskId, 'user_id' => $ownerId));
+
+        if (! $saved) {
+            $this->response->status(400);
+            return;
+        }
+
+        $this->response->json($this->describeOwner($ownerId, $users));
+    }
+
+    /**
+     * What the pill should read once the save has gone through.
+     *
+     * @param  integer $ownerId
+     * @param  array   $users
+     * @return array
+     */
+    protected function describeOwner($ownerId, array $users)
+    {
+        return array(
+            'ok'    => true,
+            'label' => $ownerId === 0 ? t('Unassigned') : $users[$ownerId],
+            'class' => $ownerId === 0 ? 'zs-owner is-unassigned' : 'zs-owner',
+        );
+    }
+
+    /**
      * Change a subtask's status from the grid.
      *
      * Subtasks carry Kanboard's own three states - Todo, In progress, Done -

@@ -1788,3 +1788,64 @@ body.zf-open { overflow: hidden; }
 }
 
 .zg-modepick ul.dropdown-submenu-open > li > a .fa { color: var(--sb-indigo, #6366f1); }
+
+/* ---------- the same pill, used for the assignee ----------
+
+   A status pill is coloured because the colour carries the meaning. A
+   person's name does not have a state, so the owner variant is quiet: no
+   fill, no coloured border, just the name and a person mark. It still reads
+   as something you can click, which is the whole point of putting it there.
+   The status column stays the loud one, and the eye still lands on it.     */
+
+.zs--owner .zs-pill {
+    min-width: 0;
+    max-width: 100%;
+    background: transparent;
+    border-color: transparent;
+    color: var(--sb-700);
+    font-weight: 600;
+}
+
+.zs--owner .zs-pill:not([disabled]):hover {
+    background: var(--sb-50);
+    border-color: var(--sb-200);
+    color: var(--sb-navy);
+}
+
+/* Somebody has to be assigned for the name to carry weight; nobody assigned
+   is a gap, and should look like one rather than like a person called
+   "Unassigned". */
+.zs--owner .zs-pill.is-unassigned {
+    color: var(--sb-400);
+    font-weight: 500;
+    font-style: italic;
+}
+
+.zs-face {
+    flex: 0 0 auto;
+    font-size: 13px;
+    opacity: .75;
+}
+
+.zs--owner .zs-pill.is-unassigned .zs-face { opacity: .5; }
+
+/* A long name truncates rather than widening the column. */
+.zs--owner .zs-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zs-menu--owner .zs-option .zs-face {
+    width: 14px;
+    text-align: center;
+    margin-right: 2px;
+}
+
+/* Read-only: no pill outline, no caret, nothing that invites a click the
+   person is not allowed to make. */
+.zs--owner.is-readonly .zs-pill {
+    padding-left: 0;
+    background: transparent;
+    border-color: transparent;
+}

@@ -137,11 +137,16 @@ $sortLink = function ($column, $label) use ($base, $order, $direction) {
                                 </a>
                             </td>
                             <td class="zg-col-owner">
-                                <?php if ($row['owner'] !== ''): ?>
-                                    <span class="zg-owner"><?= $this->text->e($row['owner']) ?></span>
-                                <?php else: ?>
-                                    <span class="zg-muted"><?= t('Unassigned') ?></span>
-                                <?php endif ?>
+                                <?= $this->render('TaskManager:grid/status_select', array(
+                                    'variant'        => 'owner',
+                                    'options'        => $assignable_users,
+                                    'option_classes' => array(),
+                                    'current'        => $row['owner_id'],
+                                    'current_label'  => $row['owner'] !== '' ? $row['owner'] : t('Unassigned'),
+                                    'current_class'  => $row['owner_id'] > 0 ? 'zs-owner' : 'zs-owner is-unassigned',
+                                    'editable'       => $can_assign,
+                                    'url_template'   => $this->url->href('StatusChangeController', 'owner', array('plugin' => 'TaskManager', 'project_id' => $project['id'], 'task_id' => $row['id'])).'&owner_id=%s&csrf_token=%s',
+                                )) ?>
                             </td>
                             <td class="zg-col-status">
                                 <?= $this->render('TaskManager:grid/status_select', array(
@@ -193,11 +198,16 @@ $sortLink = function ($column, $label) use ($base, $order, $direction) {
                                     <span class="zg-subtitle"><?= $this->text->e($sub['title']) ?></span>
                                 </td>
                                 <td class="zg-col-owner">
-                                    <?php if ($sub['owner'] !== ''): ?>
-                                        <span class="zg-owner"><?= $this->text->e($sub['owner']) ?></span>
-                                    <?php else: ?>
-                                        <span class="zg-muted"><?= t('Unassigned') ?></span>
-                                    <?php endif ?>
+                                    <?= $this->render('TaskManager:grid/status_select', array(
+                                        'variant'        => 'owner',
+                                        'options'        => $assignable_users,
+                                        'option_classes' => array(),
+                                        'current'        => $sub['owner_id'],
+                                        'current_label'  => $sub['owner'] !== '' ? $sub['owner'] : t('Unassigned'),
+                                        'current_class'  => $sub['owner_id'] > 0 ? 'zs-owner' : 'zs-owner is-unassigned',
+                                        'editable'       => $can_assign,
+                                        'url_template'   => $this->url->href('StatusChangeController', 'subtaskOwner', array('plugin' => 'TaskManager', 'project_id' => $project['id'], 'task_id' => $row['id'], 'subtask_id' => $sub['id'])).'&owner_id=%s&csrf_token=%s',
+                                    )) ?>
                                 </td>
                                 <td class="zg-col-status">
                                     <?= $this->render('TaskManager:grid/status_select', array(
