@@ -31,6 +31,11 @@ class Plugin extends Base
            cannot reach a model, and the task form is core's. */
         $this->helper->register('taskGrouping', '\Kanboard\Plugin\TaskManager\Helper\TaskGroupingHelper');
 
+        /* The display-type picker and the Filter button sit in the project
+           tab strip, which is core's header and gets none of the grid's view
+           variables. This reads them back off the request. */
+        $this->helper->register('gridHeader', '\Kanboard\Plugin\TaskManager\Helper\GridHeaderHelper');
+
         /* Replaces core's 'user' helper so a person reads as "NAME (EMP ID)".
            UserModel::prepareList() builds every user dropdown through
            getFullname(), so overriding here reaches task owner, assignee,

@@ -1681,3 +1681,110 @@ body.zf-open { overflow: hidden; }
     border-radius: 50%;
     background: var(--sb-amber);
 }
+
+/* ---------- tab strip: actions at the right-hand end ----------
+
+   The display-type picker and the Filter button share the tab strip's line
+   rather than taking a row of their own underneath it. margin-left:auto is
+   what pushes them over: the strip is already a flex row, so the gap lands
+   between the last tab and these two.                                      */
+
+.views-switcher-component ul.views.zg-tabs > li.zg-tabs-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    padding-left: 16px;
+}
+
+/* The strip scrolls sideways when the tabs outgrow it. Sticking these to the
+   right edge keeps them reachable instead of scrolled off the end. */
+.views-switcher-component ul.views.zg-tabs > li.zg-tabs-actions {
+    position: sticky;
+    right: 0;
+    background: var(--sb-white);
+}
+
+.zg-tabs-actions .zg-modepick,
+.zg-tabs-actions .zg-filter-trigger {
+    flex: 0 0 auto;
+}
+
+/* Both controls are the same height as each other here, which they were not
+   in the old toolbar - the picker took its height from a token and the
+   filter button from its padding. */
+.zg-tabs-actions .zg-modepick > a.dropdown-menu,
+.zg-tabs-actions .zg-filter-trigger {
+    height: var(--sb-control-h);
+    padding: 0 12px;
+    border: 1px solid var(--sb-200);
+    border-radius: var(--sb-r-control);
+    background: var(--sb-white);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.zg-tabs-actions .zg-filter-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--sb-700);
+}
+
+.zg-tabs-actions .zg-filter-trigger:hover,
+.zg-tabs-actions .zg-modepick > a.dropdown-menu:hover {
+    border-color: var(--sb-300);
+    color: var(--sb-navy);
+}
+
+.zg-modepick-caret {
+    color: var(--sb-400);
+    font-size: 11px;
+}
+
+/* The tab strip's own <li> rules give tabs a bottom border for the active
+   state; these two are buttons, not tabs, and must not pick that up. */
+.views-switcher-component ul.views.zg-tabs > li.zg-tabs-actions::after,
+.views-switcher-component ul.views.zg-tabs > li.zg-tabs-actions > a {
+    border-bottom: 0;
+}
+
+@media (max-width: 1100px) {
+    /* Stacked header: the strip is full width and the tabs usually fill it,
+       so the sticky right edge stops helping and starts overlapping. */
+    .views-switcher-component ul.views.zg-tabs > li.zg-tabs-actions {
+        position: static;
+        padding-left: 8px;
+    }
+}
+
+/* The mode menu itself. It used to carry its rounding and shadow as inline
+   styles on the <ul>; with the markup moved into the tab strip those went,
+   and core's default is a 3px corner with a faint shadow that sits oddly
+   against every other panel in this UI. */
+
+.zg-modepick ul.dropdown-submenu-open {
+    min-width: 170px;
+    padding: 6px;
+    border: 1px solid var(--sb-200);
+    border-radius: 10px;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
+}
+
+.zg-modepick ul.dropdown-submenu-open > li > a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    color: var(--sb-700);
+    text-decoration: none;
+}
+
+.zg-modepick ul.dropdown-submenu-open > li > a:hover {
+    background: var(--sb-100);
+    color: var(--sb-navy);
+}
+
+.zg-modepick ul.dropdown-submenu-open > li > a .fa { color: var(--sb-indigo, #6366f1); }

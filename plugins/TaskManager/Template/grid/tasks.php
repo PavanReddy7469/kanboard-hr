@@ -14,48 +14,15 @@ $sortLink = function ($column, $label) use ($base, $order, $direction) {
 ?>
 <div class="zg">
 
-    <div class="zg-toolbar" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; margin-bottom: 8px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <div class="dropdown zg-modepick">
-                <a href="#" class="dropdown-menu dropdown-menu-link-icon" aria-label="<?= t('Change view') ?>" style="padding: 6px 12px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; font-weight: 700; color: #1e293b; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
-                    <i class="fa fa-<?= $mode === 'gantt' ? 'tasks' : ($mode === 'kanban' ? 'columns' : 'list') ?>" style="color: #6366f1;"></i> 
-                    <span><?= $this->text->e($modes[$mode]) ?></span> 
-                    <i class="fa fa-caret-down" style="color: #94a3b8; font-size: 0.75rem;"></i>
-                </a>
-                <ul style="border-radius: 10px; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15); border: 1px solid #e2e8f0; padding: 6px;">
-                    <?php foreach ($modes as $key => $label): ?>
-                        <li>
-                            <?= $this->url->link(
-                                    ($key === 'gantt' ? '<i class="fa fa-tasks"></i> ' : ($key === 'kanban' ? '<i class="fa fa-columns"></i> ' : '<i class="fa fa-list"></i> ')).$label,
-                                    'TaskGridController',
-                                    'show',
-                                    array('plugin' => 'TaskManager', 'project_id' => $project['id'], 'mode' => $key, 'view' => $view, 'group_by' => $group_by),
-                                    false,
-                                    $key === $mode ? 'is-current' : ''
-                                ) ?>
-                        </li>
-                    <?php endforeach ?>
-                </ul>
-            </div>
+    <?php /* The display-type picker and the Filter button used to sit here,
+             in a toolbar of their own. They are now at the right-hand end of
+             the project tab strip (TaskManager:project_header/grid_actions),
+             which puts them on the same line as the tabs instead of spending
+             a whole row on two controls.
 
-            <?php /* Filter sits beside the display-type picker rather than up
-                     in the project header. They are the two controls that
-                     decide what this table shows, so they belong together -
-                     and the header is shared with Gantt and Calendar, where
-                     this button had nothing to open. */ ?>
-            <a href="#" class="zf-open zg-filter-trigger" data-zf-open title="<?= t('Filter') ?>">
-                <i class="fa fa-filter" aria-hidden="true"></i>
-                <span><?= t('Filter') ?></span>
-                <?php if (! empty($search)): ?>
-                    <span class="zf-open-dot" title="<?= t('A filter is applied') ?>"></span>
-                <?php endif ?>
-            </a>
-        </div>
-
-        <?php /* The "Add Task" button that used to sit here duplicated the
-                 "+ Add Task" row at the top of the table below, which does the
-                 same job without leaving the list. */ ?>
-    </div>
+             The "Add Task" button that was also here duplicated the
+             "+ Add Task" row at the top of the table below, which does the
+             same job without leaving the list. */ ?>
 
     <?php if ($mode === 'gantt'): ?>
 

@@ -52,4 +52,15 @@ $search = isset($filters['search']) ? $filters['search'] : '';
             </ul>
         </div>
     </li>
+
+    <?php /* Pushed to the right-hand end of the strip. Only on the task
+             grid: this header is shared with Gantt, Calendar, Task Lists and
+             Reports, where the display picker points at a table that is not
+             there and the Filter button has no panel to open. */ ?>
+    <?php if ($this->gridHeader->isTaskGrid()): ?>
+        <?= $this->render('TaskManager:project_header/grid_actions', array(
+            'project' => $project,
+            'filters' => $filters,
+        )) ?>
+    <?php endif ?>
 </ul>
