@@ -45,15 +45,48 @@ KB.component('calendar', function (containerElement, options) {
                 params[f] = customFilters[f];
             }
 
+            /* The separator has to depend on what is already in the URL.
+               Kanboard builds links as a query string by default, but with
+               URL rewriting switched on it builds a clean path with no "?"
+               at all - and appending "&start=..." to that would hand the
+               endpoint no range whatsoever. */
+            var separator = url.indexOf('?') === -1 ? '?' : '&';
+
             for (var key in params) {
-                url += "&" + key + "=" + encodeURIComponent(params[key]);
+                url += separator + key + "=" + encodeURIComponent(params[key]);
+                separator = '&';
             }
 
             $.getJSON(url, function(events) {
                 calendar.fullCalendar('removeEvents');
                 calendar.fullCalendar('addEventSource', events);
                 calendar.fullCalendar('rerenderEvents');
+                describeEvents(events);
             });
+        }
+
+        /* Say how much is in view, and when the first of it falls.
+
+           A month whose work all sits in its last week looks exactly like a
+           month with no work in it: the empty weeks fill the screen and the
+           ones holding tasks are below the fold. This is the cheap way to
+           tell "nothing here" apart from "keep scrolling". */
+        function describeEvents(events) {
+            var label = $('#sb-cal-count');
+            if (!label.length) { return; }
+
+            if (!events || events.length === 0) {
+                label.text(label.attr('data-empty') || 'No tasks in this view');
+                return;
+            }
+
+            var earliest = null;
+            for (var i = 0; i < events.length; i++) {
+                var start = moment(events[i].start);
+                if (earliest === null || start.isBefore(earliest)) { earliest = start; }
+            }
+
+            label.text(events.length + (events.length === 1 ? ' task' : ' tasks') + ', from ' + earliest.format('D MMM'));
         }
 
         calendar.fullCalendar({

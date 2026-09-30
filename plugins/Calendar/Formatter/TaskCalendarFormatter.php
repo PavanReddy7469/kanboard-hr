@@ -80,8 +80,31 @@ class TaskCalendarFormatter extends BaseFormatter implements FormatterInterface
                 $endDate->setTimestamp($task[$this->effectiveEndColumn]);
             }
 
-            $allDay = $startDate == $endDate && $endDate->format('Hi') == '0000';
+            /* An event is all-day when every date on it sits at midnight -
+               which is what a start date and a due date are. The old test
+               also insisted the two be the same date, so a task running from
+               the 2nd to the 6th was drawn as a timed event instead of a bar
+               across those days: FullCalendar then gives each one its own
+               line with a clock time in front of it, and a week holding a
+               dozen tasks grows to four times the height of an empty one.
+               That is what pushes the only rows with anything in them off
+               the bottom of the screen.
+
+               Read in the timezone the application is set to, so this stays
+               true wherever the team is - if those timestamps do not land on
+               midnight, the timezone is wrong and the clock times are the
+               symptom worth seeing. */
+            $allDay = $startDate->format('Hi') === '0000' && $endDate->format('Hi') === '0000';
             $format = $allDay ? 'Y-m-d' : 'Y-m-d\TH:i:s';
+
+            /* FullCalendar treats the end of an all-day event as exclusive,
+               so a bar drawn to the due date would stop the day before it.
+               Only for a span: a single all-day event already reads as one
+               day with start and end equal. */
+            if ($allDay && $endDate > $startDate) {
+                $endDate = clone $endDate;
+                $endDate->modify('+1 day');
+            }
 
             $tCode = ! empty($task['reference']) ? strtoupper($task['reference']) : sprintf('T%03d', $task['id']);
 

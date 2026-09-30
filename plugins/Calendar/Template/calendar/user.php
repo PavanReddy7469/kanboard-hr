@@ -1,21 +1,26 @@
 <div class="sb-calendar-wrapper" style="max-width: 1400px; margin: 0 auto; padding-bottom: 40px;">
     
+    <?php /* The bar is kept to one line. It used to carry a 38px badge, a
+             heading and a sentence of explanation, which together with the
+             application header pushed the first day of the month 468px down
+             a 742px screen - so four empty weeks filled the view and every
+             week that actually had work in it was below the fold. */ ?>
     <!-- Top Filter Bar -->
-    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px;">
-        
-        <!-- Left: Title & Info -->
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <span style="width: 38px; height: 38px; border-radius: 10px; background: #e0e7ff; color: #4338ca; display: inline-flex; align-items: center; justify-content: center; font-size: 1.15rem;">
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+
+        <!-- Left: Title & what is in view -->
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="width: 30px; height: 30px; border-radius: 8px; background: #e0e7ff; color: #4338ca; display: inline-flex; align-items: center; justify-content: center; font-size: 0.95rem;">
                 <i class="fa fa-calendar"></i>
             </span>
-            <div>
-                <h2 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.01em;">
-                    <?= t('Calendar & Schedule') ?>
-                </h2>
-                <span style="font-size: 0.8rem; color: #64748b;">
-                    <?= t('Weeks start on Monday. Filter by project, status, priority, or keywords.') ?>
-                </span>
-            </div>
+            <h2 style="font-size: 1.02rem; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.01em;">
+                <?= t('Calendar & Schedule') ?>
+            </h2>
+            <?php /* Filled in by calendar.js once the events for the visible
+                     range come back. Without it an empty top half of the
+                     month reads as a broken page rather than as a quiet
+                     fortnight with the work further down. */ ?>
+            <span id="sb-cal-count" data-empty="<?= t('No tasks in this view') ?>" style="font-size: 0.78rem; font-weight: 700; color: #475569; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 12px; padding: 2px 10px;"></span>
         </div>
 
         <!-- Right: Filter Controls -->
@@ -70,7 +75,7 @@
     </div>
 
     <!-- Calendar Container Card -->
-    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);">
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);">
         <?= $this->calendar->render(
             $this->url->href('CalendarController', 'userEvents', array('user_id' => $user['id'], 'plugin' => 'Calendar')),
             $this->url->href('CalendarController', 'save', array('plugin' => 'Calendar'))
