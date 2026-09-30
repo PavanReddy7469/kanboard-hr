@@ -15,6 +15,13 @@ KB.component('calendar', function (containerElement, options) {
 
         function getActiveFilters() {
             var filters = {};
+
+            /* Whose tasks. Sent on every request, including "0" for
+               everyone, because checkUrl carries the signed-in user's id
+               and leaving this out would silently fall back to it. */
+            var assignee = $('#sb-cal-assignee-filter');
+            if (assignee.length) { filters.user_id = assignee.val(); }
+
             var proj = $('#sb-cal-project-filter').val();
             if (proj && proj !== '0') filters.project_id = proj;
 
@@ -34,7 +41,13 @@ KB.component('calendar', function (containerElement, options) {
             var view = calendar.fullCalendar('getView');
             if (!view || !view.start) return;
 
-            var url = options.checkUrl;
+            /* checkUrl has the signed-in user's id baked into it. Drop it
+               rather than appending a second one and relying on the server
+               to prefer the last. */
+            var url = options.checkUrl.replace(/([?&])user_id=[^&]*(&|$)/, function (m, before, after) {
+                return after === '&' ? before : (before === '?' ? '?' : '');
+            }).replace(/[?&]$/, '');
+
             var params = {
                 "start": view.start.format(),
                 "end": view.end.format()
@@ -140,7 +153,7 @@ KB.component('calendar', function (containerElement, options) {
         });
 
         // Bind filter change events
-        $(document).on('change', '#sb-cal-project-filter, #sb-cal-status-filter, #sb-cal-priority-filter', function() {
+        $(document).on('change', '#sb-cal-assignee-filter, #sb-cal-project-filter, #sb-cal-status-filter, #sb-cal-priority-filter', function() {
             fetchCalendarEvents();
         });
 
@@ -154,6 +167,8 @@ KB.component('calendar', function (containerElement, options) {
 
         $(document).on('click', '#sb-cal-filter-reset', function(e) {
             e.preventDefault();
+            var assignee = $('#sb-cal-assignee-filter');
+            assignee.val(assignee.attr('data-me'));
             $('#sb-cal-project-filter').val('0');
             $('#sb-cal-status-filter').val('open');
             $('#sb-cal-priority-filter').val('0');

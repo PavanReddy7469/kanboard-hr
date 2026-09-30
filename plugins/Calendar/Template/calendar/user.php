@@ -25,7 +25,26 @@
 
         <!-- Right: Filter Controls -->
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            
+
+            <?php /* This page shows one person's work, and until now that
+                     person was always whoever was signed in - which is why an
+                     administrator with nothing assigned to them saw an empty
+                     calendar and read it as broken. Whose work it shows is
+                     now a choice. "Everyone" is bounded by the projects the
+                     viewer can open, which the controller enforces. */ ?>
+            <!-- Assignee Filter -->
+            <div style="position: relative;">
+                <select id="sb-cal-assignee-filter" data-me="<?= (int) $user['id'] ?>" style="padding: 7px 28px 7px 12px; font-size: 0.84rem; font-weight: 600; color: #1e293b; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none;">
+                    <option value="<?= (int) $user['id'] ?>"><?= t('My tasks') ?></option>
+                    <option value="0"><?= t('★ Everyone') ?></option>
+                    <?php foreach ($assignees as $assigneeId => $assigneeName): ?>
+                        <?php if ((int) $assigneeId === (int) $user['id']) { continue; } ?>
+                        <option value="<?= (int) $assigneeId ?>"><?= $this->text->e($assigneeName) ?></option>
+                    <?php endforeach ?>
+                </select>
+                <i class="fa fa-caret-down" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #64748b; font-size: 0.75rem;"></i>
+            </div>
+
             <!-- Project Filter -->
             <div style="position: relative;">
                 <select id="sb-cal-project-filter" style="padding: 7px 28px 7px 12px; font-size: 0.84rem; font-weight: 600; color: #1e293b; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none;">

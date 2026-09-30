@@ -6,7 +6,9 @@ use Kanboard\Controller\BaseController;
 use Kanboard\Filter\TaskAssigneeFilter;
 use Kanboard\Filter\TaskDueDateRangeFilter;
 use Kanboard\Filter\TaskProjectFilter;
+use Kanboard\Filter\TaskProjectsFilter;
 use Kanboard\Filter\TaskStatusFilter;
+use Kanboard\Model\ProjectModel;
 use Kanboard\Model\TaskModel;
 
 /**
@@ -24,10 +26,59 @@ class CalendarController extends BaseController
         $projects = $this->projectUserRoleModel->getActiveProjectsByUser($user['id']);
 
         $this->response->html($this->helper->layout->app('Calendar:calendar/user', array(
-            'user'     => $user,
-            'projects' => $projects,
-            'title'    => t('Calendar'),
+            'user'      => $user,
+            'projects'  => $projects,
+            'assignees' => $this->getAssignableUsers(),
+            'title'     => t('Calendar'),
         )));
+    }
+
+    /**
+     * Everyone who can be picked in the Assignee filter: the people who can
+     * hold a task on any project this viewer can see.
+     *
+     * @return array  user id => name
+     */
+    protected function getAssignableUsers()
+    {
+        $users = array();
+
+        foreach ($this->getVisibleProjectIds() as $projectId) {
+            foreach ($this->projectUserRoleModel->getAssignableUsersList($projectId, false) as $userId => $userName) {
+                $users[$userId] = $userName;
+            }
+        }
+
+        /* Plain string order, not natural order: strnatcasecmp ignores the
+           space in a name, so "P Sudheep" compares as "PSudheep" and sorts
+           after "Pavan Reddy". Natural order earns its keep on embedded
+           numbers, which people's names do not have. */
+        asort($users, SORT_STRING | SORT_FLAG_CASE);
+
+        return $users;
+    }
+
+    /**
+     * The projects whose tasks this viewer is allowed to see.
+     *
+     * userEvents() filters by assignee and by nothing else, so asking it for
+     * somebody else's tasks - or for everybody's - would have returned tasks
+     * from projects the viewer is not a member of. That did not show up while
+     * the page only ever asked for the signed-in user's own work; it does the
+     * moment the Assignee filter lets you ask for anyone.
+     *
+     * @return array
+     */
+    protected function getVisibleProjectIds()
+    {
+        if ($this->userSession->isAdmin()) {
+            return $this->db
+                ->table(ProjectModel::TABLE)
+                ->eq('is_active', ProjectModel::ACTIVE)
+                ->findAllByColumn('id');
+        }
+
+        return array_keys($this->projectUserRoleModel->getActiveProjectsByUser($this->userSession->getId()));
     }
 
     public function project()
@@ -103,12 +154,26 @@ class CalendarController extends BaseController
         $endRange = $this->request->getStringParam('end');
         $startColumn = $this->configModel->get('calendar_project_tasks', 'date_started');
 
+        $visibleProjectIds = $this->getVisibleProjectIds();
+
+        if (empty($visibleProjectIds)) {
+            $this->response->json(array());
+            return;
+        }
+
         $builder = clone $this->taskQuery;
+
+        /* Scope first, and always. The assignee filter alone decides whose
+           work is shown, not which projects it may come from, so without
+           this a request for another person's tasks - or for everyone's -
+           would return work from projects the viewer cannot open. */
+        $builder->withFilter(new TaskProjectsFilter($visibleProjectIds));
+
         if ($user_id > 0) {
             $builder->withFilter(new TaskAssigneeFilter($user_id));
         }
 
-        if ($projectId > 0) {
+        if ($projectId > 0 && in_array($projectId, array_map('intval', $visibleProjectIds), true)) {
             $builder->withFilter(new TaskProjectFilter($projectId));
         }
 

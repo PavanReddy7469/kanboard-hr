@@ -197,8 +197,12 @@ class DashboardHelper extends Base
             }
         }
 
+        /* Columns get natural order, which puts "Sprint 2" before
+           "Sprint 10". Names get plain string order: strnatcasecmp ignores
+           the space in a name, so "P Sudheep" compares as "PSudheep" and
+           lands after "Pavan Reddy". */
         asort($columns, SORT_NATURAL | SORT_FLAG_CASE);
-        asort($users, SORT_NATURAL | SORT_FLAG_CASE);
+        asort($users, SORT_STRING | SORT_FLAG_CASE);
 
         return array(
             'columns'        => $columns,
