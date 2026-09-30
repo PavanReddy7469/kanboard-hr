@@ -1076,3 +1076,35 @@ input.sb-inline-input:focus {
     .sb-result-owner,
     .sb-result-dates { grid-column: 2 / -1; }
 }
+
+/* ---------- modal links: make the whole link the click target ----------
+
+   Kanboard dispatches modal clicks with one delegated listener that tests
+   e.target.matches('.js-modal-medium') - the element actually clicked, with
+   no walk up to its ancestors. So a modal link only opens when the click
+   lands exactly on the element carrying the class.
+
+   Core gets away with it by putting the class on the icon as well as on the
+   link. Any richer button - an icon plus a title plus a line of explanation,
+   which is what the Documents tab uses - has children carrying no class at
+   all, so a click on the text matched nothing, no handler ran, nothing
+   called preventDefault, and the browser simply followed the href. That is
+   how you end up staring at "Add a new external link" as a bare serif page
+   with no stylesheet and no buttons: those pages are modal fragments, and
+   their upload box and their Save button are script-rendered components
+   that only exist once the modal has mounted them.
+
+   Taking the children out of hit-testing makes e.target the link itself,
+   whatever part of it was clicked. It repairs the Documents buttons, the
+   Duplicate and Delete items in the task menu, and every icon-only modal
+   button in the plugin - the pencils and bins on the milestone and task
+   list rows had no clickable area at all, since the icon was the entire
+   content.                                                              */
+
+.js-modal-medium *,
+.js-modal-large *,
+.js-modal-small *,
+.js-modal-confirm *,
+.js-modal-replace * {
+    pointer-events: none;
+}
