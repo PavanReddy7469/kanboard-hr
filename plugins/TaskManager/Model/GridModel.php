@@ -317,11 +317,40 @@ class GridModel extends Base
      */
     public function getTaskRows($projectId, $view = self::FILTER_OPEN, $search = '', $order = 'id', $direction = 'ASC')
     {
+        return $this->getTaskRowsForProjects(array($projectId), $view, $search, $order, $direction);
+    }
+
+    /**
+     * The same rows, across several projects at once.
+     *
+     * The dashboard's Tasks tab used to build its own rows from a query that
+     * selected neither the column title nor the owner's name nor the subtask
+     * counts, so every task on it read "Open" whatever column it was in, the
+     * owner could not be shown at all, and the Subtasks column was a row of
+     * dashes. Rather than fix that query to match this one, there is now a
+     * single row builder and both pages read it, so the two cannot drift
+     * apart again.
+     *
+     * @param  array   $projectIds
+     * @param  string  $view
+     * @param  string  $search
+     * @param  string  $order
+     * @param  string  $direction
+     * @return array
+     */
+    public function getTaskRowsForProjects(array $projectIds, $view = self::FILTER_OPEN, $search = '', $order = 'id', $direction = 'ASC')
+    {
+        $projectIds = array_values(array_unique(array_map('intval', $projectIds)));
+
+        if (empty($projectIds)) {
+            return array();
+        }
+
         $query = $this->db->table(TaskModel::TABLE)
-            ->columns('id', 'title', 'column_id', 'owner_id', 'is_active', 'priority', 'color_id', 'reference',
+            ->columns('id', 'title', 'project_id', 'column_id', 'owner_id', 'is_active', 'priority', 'color_id', 'reference',
                       'date_started', 'date_due', 'date_creation', 'date_completed',
                       'time_estimated', 'time_spent', 'position')
-            ->eq('project_id', $projectId);
+            ->in('project_id', $projectIds);
 
         if ($view === self::FILTER_OPEN) {
             $query->eq('is_active', 1);
@@ -336,21 +365,26 @@ class GridModel extends Base
         if ($search !== '') {
             $isAdvancedFilter = (strpos($search, ':') !== false);
             if ($isAdvancedFilter && isset($this->taskLexer)) {
+                /* TaskProjectsFilter, not TaskProjectFilter: the plural one
+                   takes the whole scope, so one project and twelve go down
+                   the same path. */
                 $lexerBuilder = $this->taskLexer
                     ->build($search)
-                    ->withFilter(new \Kanboard\Filter\TaskProjectFilter($projectId));
+                    ->withFilter(new \Kanboard\Filter\TaskProjectsFilter($projectIds));
                 $tasks = $lexerBuilder->getQuery()->findAll();
             } else {
                 $fuzzyIds = array();
                 if (isset($this->fuzzySearchModel)) {
-                    $fuzzyIds = $this->fuzzySearchModel->findTaskIdsByFuzzyTitle($search, $projectId);
+                    foreach ($projectIds as $projectId) {
+                        $fuzzyIds = array_merge($fuzzyIds, $this->fuzzySearchModel->findTaskIdsByFuzzyTitle($search, $projectId));
+                    }
                 }
 
                 $query->beginOr();
                 $query->ilike('title', '%'.$search.'%');
                 $query->ilike('description', '%'.$search.'%');
                 if (! empty($fuzzyIds)) {
-                    $query->in('id', $fuzzyIds);
+                    $query->in('id', array_unique($fuzzyIds));
                 }
                 $query->closeOr();
                 $tasks = $query->findAll();
@@ -358,26 +392,31 @@ class GridModel extends Base
         } else {
             $tasks = $query->findAll();
         }
+
         $users    = $this->userModel->getActiveUsersList();
-        $columns  = $this->columnModel->getList($projectId);
-        $project  = $this->projectModel->getById($projectId);
-        $progress = $this->getSubtaskProgress($projectId);
-        $tags     = $this->getTagsByTask($projectId);
-        $subtasks = $this->getSubtasksByTask($projectId);
+        $columns  = $this->getColumnTitles($projectIds);
+        $projects = $this->getProjectNames($projectIds);
+        $progress = $this->getSubtaskProgress($projectIds);
+        $tags     = $this->getTagsByTask($projectIds);
+        $subtasks = $this->getSubtasksByTask($projectIds);
         $rows     = array();
 
         foreach ($tasks as $task) {
-            $id = (int) $task['id'];
+            $id        = (int) $task['id'];
+            $projectId = (int) $task['project_id'];
+            $status    = isset($columns[$task['column_id']]) ? $columns[$task['column_id']] : '';
 
             $rows[] = array(
                 'id'         => $id,
                 'code'       => $this->getTaskCode($task),
                 'title'      => $task['title'],
+                'project_id' => $projectId,
+                'project'    => isset($projects[$projectId]) ? $projects[$projectId] : '',
                 'owner'      => isset($users[$task['owner_id']]) ? $users[$task['owner_id']] : '',
                 'owner_id'   => (int) $task['owner_id'],
                 'column_id'  => (int) $task['column_id'],
-                'status'     => isset($columns[$task['column_id']]) ? $columns[$task['column_id']] : '',
-                'status_class' => $this->helper->taskTree->getStatusClass(isset($columns[$task['column_id']]) ? $columns[$task['column_id']] : ''),
+                'status'     => $status,
+                'status_class' => $this->helper->taskTree->getStatusClass($status),
                 'is_active'  => (int) $task['is_active'],
                 'tags'       => isset($tags[$id]) ? $tags[$id] : array(),
                 'start_date' => (int) $task['date_started'],
@@ -395,16 +434,64 @@ class GridModel extends Base
     }
 
     /**
+     * column id => title, across a set of projects.
+     *
+     * Column ids are unique across the whole installation, so one map serves
+     * however many projects are in scope and a task's column_id resolves
+     * without knowing which project it came from.
+     *
+     * @param  array $projectIds
+     * @return array
+     */
+    protected function getColumnTitles(array $projectIds)
+    {
+        $titles = array();
+
+        $rows = $this->db->table(\Kanboard\Model\ColumnModel::TABLE)
+            ->columns('id', 'title')
+            ->in('project_id', $projectIds)
+            ->findAll();
+
+        foreach ($rows as $row) {
+            $titles[(int) $row['id']] = $row['title'];
+        }
+
+        return $titles;
+    }
+
+    /**
+     * project id => name.
+     *
+     * @param  array $projectIds
+     * @return array
+     */
+    protected function getProjectNames(array $projectIds)
+    {
+        $names = array();
+
+        $rows = $this->db->table(CoreProjectModel::TABLE)
+            ->columns('id', 'name')
+            ->in('id', $projectIds)
+            ->findAll();
+
+        foreach ($rows as $row) {
+            $names[(int) $row['id']] = $row['name'];
+        }
+
+        return $names;
+    }
+
+    /**
      * Every subtask in the project, grouped by task.
      *
      * One query for the whole grid rather than one per row: the grid renders
      * up to a page of tasks, and a query each would be a page of round trips
      * for something almost always small.
      *
-     * @param  integer $projectId
+     * @param  array $projectIds
      * @return array   task_id => list of subtasks
      */
-    protected function getSubtasksByTask($projectId)
+    protected function getSubtasksByTask(array $projectIds)
     {
         $rows = $this->db->table(SubtaskModel::TABLE)
             ->columns(
@@ -418,7 +505,7 @@ class GridModel extends Base
                 SubtaskModel::TABLE.'.position'
             )
             ->join(TaskModel::TABLE, 'id', 'task_id')
-            ->eq(TaskModel::TABLE.'.project_id', $projectId)
+            ->in(TaskModel::TABLE.'.project_id', $projectIds)
             ->asc(SubtaskModel::TABLE.'.position')
             ->findAll();
 
@@ -673,10 +760,10 @@ class GridModel extends Base
     /**
      * task_id => percent of its subtasks marked done.
      *
-     * @param  integer $projectId
+     * @param  array   $projectIds
      * @return array
      */
-    protected function getSubtaskProgress($projectId)
+    protected function getSubtaskProgress(array $projectIds)
     {
         $totals = array();
 
@@ -684,7 +771,7 @@ class GridModel extends Base
         $rows = $this->db->table(SubtaskModel::TABLE)
             ->columns(SubtaskModel::TABLE.'.task_id', SubtaskModel::TABLE.'.status', 'COUNT(*) AS total')
             ->join(TaskModel::TABLE, 'id', 'task_id')
-            ->eq(TaskModel::TABLE.'.project_id', $projectId)
+            ->in(TaskModel::TABLE.'.project_id', $projectIds)
             ->groupBy(SubtaskModel::TABLE.'.task_id', SubtaskModel::TABLE.'.status')
             ->findAll();
 
@@ -715,10 +802,10 @@ class GridModel extends Base
     /**
      * task_id => list of tag names.
      *
-     * @param  integer $projectId
+     * @param  array   $projectIds
      * @return array
      */
-    protected function getTagsByTask($projectId)
+    protected function getTagsByTask(array $projectIds)
     {
         $tags = array();
 
@@ -726,7 +813,7 @@ class GridModel extends Base
             ->columns('task_has_tags.task_id', 'tags.name')
             ->join('tags', 'id', 'tag_id')
             ->join(TaskModel::TABLE, 'id', 'task_id', 'task_has_tags')
-            ->eq(TaskModel::TABLE.'.project_id', $projectId)
+            ->in(TaskModel::TABLE.'.project_id', $projectIds)
             ->findAll();
 
         foreach ($rows as $row) {
