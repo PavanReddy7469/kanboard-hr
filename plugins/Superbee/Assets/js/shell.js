@@ -363,10 +363,42 @@
         if (e.key === 'Escape') { closePanelMenus(null); }
     });
 
+    /* Confirm the copy on whichever control was pressed.
+
+       A labelled menu item becomes a tick and the word. An icon-only button
+       becomes just the tick: adding the word would widen it and shove
+       everything beside it along the header for a second and a half. Its
+       title carries the confirmation instead, so a hover still says it and a
+       screen reader still hears it. */
     function flashCopied(button, text) {
         var original = button.innerHTML;
-        button.innerHTML = '<i class="fa fa-check" aria-hidden="true"></i> ' + text;
-        setTimeout(function () { button.innerHTML = original; }, 1400);
+        var originalTitle = button.getAttribute('title');
+        var iconOnly = button.textContent.trim() === '';
+
+        /* fa-fw, because the tick and the chain are different widths and
+           the control would twitch as they swap. */
+        button.innerHTML = iconOnly
+            ? '<i class="fa fa-check fa-fw" aria-hidden="true"></i>'
+            : '<i class="fa fa-check fa-fw" aria-hidden="true"></i> ' + text;
+
+        if (iconOnly) {
+            button.setAttribute('title', text);
+        }
+
+        button.classList.add('is-copied');
+
+        setTimeout(function () {
+            button.innerHTML = original;
+            button.classList.remove('is-copied');
+
+            if (iconOnly) {
+                if (originalTitle === null) {
+                    button.removeAttribute('title');
+                } else {
+                    button.setAttribute('title', originalTitle);
+                }
+            }
+        }, 1400);
     }
 
     function legacyCopy(value) {

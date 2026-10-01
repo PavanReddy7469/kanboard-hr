@@ -16,24 +16,40 @@ $row = function ($label, $value, $hint = '') {
             <?= $this->modal->large('pencil-square-o', t('Edit'), 'TaskModificationController', 'edit', array('task_id' => $tid, 'project_id' => $pid)) ?>
         <?php endif ?>
 
+        <?php /* Copying the link is how a task reaches a chat message, and
+                 everyone does it - including the people who cannot edit
+                 anything. It sat behind the overflow menu alongside Duplicate
+                 and Delete: two clicks for the common action, with the
+                 destructive ones as its neighbours. It is out here on its own
+                 now, and taken out of the menu rather than listed twice.
+
+                 Relative on purpose. url->base() depends on APPLICATION_URL,
+                 which is unset here and yields a hostname with no port; the
+                 browser knows its own origin, so the script builds the
+                 absolute link from it. */ ?>
+        <button type="button"
+                class="zp-head-icon"
+                data-zp-copy-link="<?= $this->text->e($this->url->href('TaskViewController', 'show', array('task_id' => $tid, 'project_id' => $pid))) ?>"
+                title="<?= t('Copy link to this task') ?>"
+                aria-label="<?= t('Copy link to this task') ?>">
+            <?php /* fa-fw: the tick that replaces this for a moment is a
+                     different width, and without it the button twitches. */ ?>
+            <i class="fa fa-link fa-fw" aria-hidden="true"></i>
+        </button>
+
         <?php /* Overflow menu: the actions that act on the task as a whole
-                 rather than on one of its fields. */ ?>
+                 rather than on one of its fields. Now that Copy link has left
+                 it, everything remaining needs a permission - so somebody with
+                 neither would have been left with a "..." that opens an empty
+                 box. Drawn only when it has something in it. */ ?>
+        <?php $canRemove = $this->projectRole->canRemoveTask($task) ?>
+        <?php if ($can_edit || $canRemove): ?>
         <span class="zp-menu">
             <a href="#" class="zp-menu-toggle" data-zp-menu title="<?= t('More actions') ?>" aria-haspopup="true" aria-expanded="false">
                 <i class="fa fa-ellipsis-h" aria-hidden="true"></i>
             </a>
 
             <span class="zp-menu-list" hidden>
-                <button type="button"
-                        class="zp-menu-item"
-                        <?php /* Relative on purpose. url->base() depends on
-                                 APPLICATION_URL, which is unset here and yields
-                                 a hostname with no port; the browser knows its
-                                 own origin, so it builds the absolute link. */ ?>
-                        data-zp-copy-link="<?= $this->text->e($this->url->href('TaskViewController', 'show', array('task_id' => $tid, 'project_id' => $pid))) ?>">
-                    <i class="fa fa-link" aria-hidden="true"></i> <?= t('Copy link') ?>
-                </button>
-
                 <?php if ($can_edit): ?>
                     <a class="zp-menu-item js-modal-confirm"
                        href="<?= $this->url->href('TaskDuplicationController', 'duplicate', array('task_id' => $tid, 'project_id' => $pid)) ?>">
@@ -41,7 +57,7 @@ $row = function ($label, $value, $hint = '') {
                     </a>
                 <?php endif ?>
 
-                <?php if ($this->projectRole->canRemoveTask($task)): ?>
+                <?php if ($canRemove): ?>
                     <?php /* Kanboard deletes outright - there is no trash to
                              restore from - so this says delete, and the
                              confirmation says permanently. */ ?>
@@ -52,6 +68,7 @@ $row = function ($label, $value, $hint = '') {
                 <?php endif ?>
             </span>
         </span>
+        <?php endif ?>
         <a href="<?= $this->url->href('TaskGridController', 'show', array('plugin' => 'TaskManager', 'task_id' => $tid, 'project_id' => $pid)) ?>" title="<?= t('Open full page') ?>">
             <i class="fa fa-expand" aria-hidden="true"></i>
         </a>

@@ -1849,3 +1849,37 @@ body.zf-open { overflow: hidden; }
     background: transparent;
     border-color: transparent;
 }
+
+/* ---------- icon action in the drawer header ----------
+
+   Copy link lives out here beside Edit now rather than behind the overflow
+   menu. It is a <button>, not a link - it copies rather than navigates - so
+   it needs the surrounding anchors' appearance spelled out: a button carries
+   the browser's own chrome, which would read as a form control dropped into
+   a row of quiet icons.                                                   */
+
+.zp-head-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1;
+    color: var(--sb-500);
+    cursor: pointer;
+}
+
+.zp-head-icon:hover { color: var(--sb-navy); }
+
+.zp-head-icon:focus-visible {
+    outline: 2px solid var(--sb-wip-fg);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+
+/* The tick, for its second and a half. Green says it worked without needing
+   the word beside it. */
+.zp-head-icon.is-copied { color: var(--sb-closed-fg); }
