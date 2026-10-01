@@ -61,6 +61,11 @@ class TaskPanelController extends BaseController
             'subtasks'     => $this->subtaskModel->getAll($task['id']),
             'files'        => $this->taskFileModel->getAll($task['id']),
 
+            /* What the server will actually accept, so the Documents tab can
+               say so before somebody waits out an upload that was never
+               going to be allowed. */
+            'max_size'     => get_upload_max_size(),
+
             /* Reference material the task points at rather than carries:
                specifications, drawings, repositories, shared drives. Kanboard
                already models these as external links; they simply were not

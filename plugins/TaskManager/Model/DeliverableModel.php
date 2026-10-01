@@ -4,6 +4,7 @@ namespace Kanboard\Plugin\TaskManager\Model;
 
 use Kanboard\Core\Base;
 use Kanboard\Model\ProjectModel as CoreProjectModel;
+use Kanboard\Model\TaskFileModel;
 use Kanboard\Model\TaskModel;
 use Kanboard\Model\UserModel;
 
@@ -59,9 +60,14 @@ class DeliverableModel extends Base
             return false;
         }
 
-        $url = $this->normaliseUrl(isset($values['url']) ? $values['url'] : '');
+        $url    = $this->normaliseUrl(isset($values['url']) ? $values['url'] : '');
+        $fileId = isset($values['file_id']) ? (int) $values['file_id'] : 0;
 
-        if ($url === '') {
+        /* Evidence is a link or a file, and one of the two has to be there.
+           A submission that is neither is a row saying "done" with nothing
+           behind it - which is the very thing the reviewer is being asked
+           to look at. */
+        if ($url === '' && $fileId <= 0) {
             return false;
         }
 
@@ -71,6 +77,7 @@ class DeliverableModel extends Base
             'user_id'        => (int) $userId,
             'title'          => isset($values['title']) ? trim($values['title']) : '',
             'url'            => $url,
+            'file_id'        => $fileId,
             'note'           => isset($values['note']) ? trim($values['note']) : '',
             'status'         => self::STATUS_PENDING,
             'reviewer_id'    => 0,
@@ -324,8 +331,57 @@ class DeliverableModel extends Base
             $rows[$index]['reviewer']       = isset($names[(int) $row['reviewer_id']]) ? $names[(int) $row['reviewer_id']] : '';
             $rows[$index]['task_title']     = isset($taskById[$taskId]) ? $taskById[$taskId]['title'] : '';
             $rows[$index]['task_is_active'] = isset($taskById[$taskId]) ? (int) $taskById[$taskId]['is_active'] : 1;
+            $rows[$index]['file_id']        = isset($row['file_id']) ? (int) $row['file_id'] : 0;
+            $rows[$index]['file_name']      = '';
+            $rows[$index]['file_size']      = 0;
         }
 
+        $this->attachFiles($rows);
+
         return $rows;
+    }
+
+    /**
+     * Put the name and size on every row whose evidence is a file.
+     *
+     * One query for the whole page rather than one per row, and a file that
+     * has since been deleted simply leaves the row with no name - the
+     * submission is still a record of what was claimed and when, and losing
+     * the attachment should not make the row disappear.
+     *
+     * @param  array $rows  Modified in place.
+     */
+    protected function attachFiles(array &$rows)
+    {
+        $fileIds = array();
+
+        foreach ($rows as $row) {
+            if ($row['file_id'] > 0) {
+                $fileIds[$row['file_id']] = $row['file_id'];
+            }
+        }
+
+        if (empty($fileIds)) {
+            return;
+        }
+
+        $files = $this->db
+            ->table(TaskFileModel::TABLE)
+            ->columns('id', 'name', 'size')
+            ->in('id', array_values($fileIds))
+            ->findAll();
+
+        $byId = array();
+
+        foreach ($files as $file) {
+            $byId[(int) $file['id']] = $file;
+        }
+
+        foreach ($rows as $index => $row) {
+            if ($row['file_id'] > 0 && isset($byId[$row['file_id']])) {
+                $rows[$index]['file_name'] = $byId[$row['file_id']]['name'];
+                $rows[$index]['file_size'] = (int) $byId[$row['file_id']]['size'];
+            }
+        }
     }
 }

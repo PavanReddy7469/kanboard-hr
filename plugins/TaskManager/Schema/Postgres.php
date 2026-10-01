@@ -4,7 +4,7 @@ namespace Kanboard\Plugin\TaskManager\Schema;
 
 use PDO;
 
-const VERSION = 10;
+const VERSION = 11;
 
 function version_1(PDO $pdo)
 {
@@ -229,4 +229,11 @@ function version_10(PDO $pdo)
        locking the current users out of their own instance to prove a point
        would be a poor trade. */
     $pdo->exec("ALTER TABLE users ADD COLUMN must_change_password SMALLINT NOT NULL DEFAULT 0");
+}
+
+function version_11(PDO $pdo)
+{
+    /* See the MySQL schema for why this exists. 0 means the submission is a
+       link rather than a file, which is every row that already exists. */
+    $pdo->exec("ALTER TABLE taskmanager_deliverables ADD COLUMN file_id INTEGER NOT NULL DEFAULT 0");
 }

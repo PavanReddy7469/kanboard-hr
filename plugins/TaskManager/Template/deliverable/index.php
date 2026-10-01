@@ -68,9 +68,12 @@ $statusClass = array(
                     <ul class="sb-deliv-list">
                         <?php foreach ($rows as $row): ?>
                             <?php
-                                $isGoogleDrive = strstr($row['url'], 'drive.google.com') || strstr($row['url'], 'docs.google.com');
-                                $isGithub = strstr($row['url'], 'github.com') || strstr($row['url'], 'gitlab.com');
-                                $isFigma = strstr($row['url'], 'figma.com');
+                                /* A file submission has no url at all, and a legacy row could
+                                   hold NULL - strstr() on either is a deprecation notice in PHP 8. */
+                                $deliverableUrl = (string) $row['url'];
+                                $isGoogleDrive = strstr($deliverableUrl, 'drive.google.com') || strstr($deliverableUrl, 'docs.google.com');
+                                $isGithub = strstr($deliverableUrl, 'github.com') || strstr($deliverableUrl, 'gitlab.com');
+                                $isFigma = strstr($deliverableUrl, 'figma.com');
                             ?>
                             <li class="<?= $statusClass[$row['status']] ?>">
                                 <div class="sb-deliv-main">
@@ -80,18 +83,42 @@ $statusClass = array(
                                         <i class="fa fa-tasks"></i> #<?= $row['task_id'] ?> <?= $this->text->e($row['task_title']) ?>
                                     </a>
 
-                                    <a class="sb-deliv-link" href="<?= $this->text->e($row['url']) ?>" target="_blank" rel="noopener noreferrer nofollow" title="<?= t('Open submitted live document') ?>">
-                                        <?php if ($isGoogleDrive): ?>
-                                            <i class="fa fa-google" style="color: #4285f4;" aria-hidden="true"></i>
-                                        <?php elseif ($isGithub): ?>
-                                            <i class="fa fa-github" style="color: #333;" aria-hidden="true"></i>
-                                        <?php elseif ($isFigma): ?>
-                                            <i class="fa fa-paint-brush" style="color: #a259ff;" aria-hidden="true"></i>
-                                        <?php else: ?>
-                                            <i class="fa fa-external-link" style="color: #6366f1;" aria-hidden="true"></i>
-                                        <?php endif ?>
-                                        <span><?= $this->text->e($row['title'] !== '' ? $row['title'] : $row['url']) ?></span>
-                                    </a>
+                                    <?php /* A submission is a file or a link. A file opens through
+                                             the viewer rather than in a new tab, and carries its size:
+                                             a reviewer deciding whether to open a 60MB drawing on a
+                                             phone deserves to know that first. */ ?>
+                                    <?php if ($row['file_id'] > 0): ?>
+                                        <a class="sb-deliv-link"
+                                           href="<?= $this->url->href('FileViewerController', 'show', array('file_id' => $row['file_id'], 'project_id' => $project['id'])) ?>"
+                                           title="<?= t('Open the attached report') ?>">
+                                            <i class="fa fa-paperclip" style="color: #6366f1;" aria-hidden="true"></i>
+                                            <span>
+                                                <?php if ($row['file_name'] !== ''): ?>
+                                                    <?= $this->text->e($row['title'] !== '' ? $row['title'] : $row['file_name']) ?>
+                                                    <?php if ($row['file_size'] > 0): ?>
+                                                        <em style="color: #94a3b8; font-style: normal;">(<?= $this->text->bytes($row['file_size']) ?>)</em>
+                                                    <?php endif ?>
+                                                <?php else: ?>
+                                                    <?php /* The row outlives its attachment: the submission is
+                                                             still a record of what was claimed and when. */ ?>
+                                                    <em style="color: #b45309; font-style: normal;"><?= t('Attached file is no longer on disk') ?></em>
+                                                <?php endif ?>
+                                            </span>
+                                        </a>
+                                    <?php else: ?>
+                                        <a class="sb-deliv-link" href="<?= $this->text->e($row['url']) ?>" target="_blank" rel="noopener noreferrer nofollow" title="<?= t('Open submitted live document') ?>">
+                                            <?php if ($isGoogleDrive): ?>
+                                                <i class="fa fa-google" style="color: #4285f4;" aria-hidden="true"></i>
+                                            <?php elseif ($isGithub): ?>
+                                                <i class="fa fa-github" style="color: #333;" aria-hidden="true"></i>
+                                            <?php elseif ($isFigma): ?>
+                                                <i class="fa fa-paint-brush" style="color: #a259ff;" aria-hidden="true"></i>
+                                            <?php else: ?>
+                                                <i class="fa fa-external-link" style="color: #6366f1;" aria-hidden="true"></i>
+                                            <?php endif ?>
+                                            <span><?= $this->text->e($row['title'] !== '' ? $row['title'] : $row['url']) ?></span>
+                                        </a>
+                                    <?php endif ?>
 
                                     <span class="sb-deliv-meta">
                                         <?= t('Submitted by') ?> <strong><?= $this->text->e($row['submitter']) ?></strong><?= '' ?>

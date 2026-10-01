@@ -28,7 +28,14 @@
             <i class="fa fa-upload" aria-hidden="true"></i>
             <span>
                 <strong><?= t('Upload a file') ?></strong>
-                <em><?= t('Stored with this task') ?></em>
+                <em>
+                    <?php /* Say the limit here, rather than letting somebody
+                             discover it by waiting out a 90MB upload and
+                             getting nothing back. Read from the server at
+                             render time, so it cannot drift from what is
+                             actually enforced. */ ?>
+                    <?= $max_size > 0 ? t('PDF, Word, images - up to %s', $this->text->bytes($max_size)) : t('Stored with this task') ?>
+                </em>
             </span>
         </a>
     </div>

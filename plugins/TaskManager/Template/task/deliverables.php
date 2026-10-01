@@ -26,13 +26,28 @@ $class    = array('pending' => 'is-pending', 'approved' => 'is-approved', 'rejec
         <ul class="sb-deliv-list is-compact" style="margin-bottom: 14px;">
             <?php foreach ($rows as $row): ?>
                 <?php
-                    $isGoogleDrive = strstr($row['url'], 'drive.google.com') || strstr($row['url'], 'docs.google.com');
-                    $isGithub = strstr($row['url'], 'github.com');
-                    $isFigma = strstr($row['url'], 'figma.com');
+                    /* A file submission has no url; strstr() on NULL is a
+                       deprecation notice in PHP 8. */
+                    $deliverableUrl = (string) $row['url'];
+                    $isGoogleDrive = strstr($deliverableUrl, 'drive.google.com') || strstr($deliverableUrl, 'docs.google.com');
+                    $isGithub = strstr($deliverableUrl, 'github.com');
+                    $isFigma = strstr($deliverableUrl, 'figma.com');
                 ?>
                 <li class="<?= $class[$row['status']] ?>">
                     <div class="sb-deliv-main">
-                        <a class="sb-deliv-link" href="<?= $this->text->e($row['url']) ?>" target="_blank" rel="noopener noreferrer nofollow" title="<?= t('Open submitted document') ?>">
+                        <?php if ($row['file_id'] > 0): ?>
+                            <a class="sb-deliv-link" href="<?= $this->url->href('FileViewerController', 'show', array('file_id' => $row['file_id'], 'project_id' => $task['project_id'])) ?>" title="<?= t('Open the attached report') ?>">
+                                <i class="fa fa-paperclip" style="color: #6366f1;"></i>
+                                <strong>
+                                    <?php if ($row['file_name'] !== ''): ?>
+                                        <?= $this->text->e($row['title'] !== '' ? $row['title'] : $row['file_name']) ?>
+                                    <?php else: ?>
+                                        <em style="color: #b45309; font-style: normal;"><?= t('Attached file is no longer on disk') ?></em>
+                                    <?php endif ?>
+                                </strong>
+                            </a>
+                        <?php else: ?>
+                        <a class="sb-deliv-link" href="<?= $this->text->e($deliverableUrl) ?>" target="_blank" rel="noopener noreferrer nofollow" title="<?= t('Open submitted document') ?>">
                             <?php if ($isGoogleDrive): ?>
                                 <i class="fa fa-google" style="color: #4285f4;"></i>
                             <?php elseif ($isGithub): ?>
@@ -42,8 +57,9 @@ $class    = array('pending' => 'is-pending', 'approved' => 'is-approved', 'rejec
                             <?php else: ?>
                                 <i class="fa fa-external-link" style="color: #6366f1;"></i>
                             <?php endif ?>
-                            <strong><?= $this->text->e($row['title'] !== '' ? $row['title'] : $row['url']) ?></strong>
+                            <strong><?= $this->text->e($row['title'] !== '' ? $row['title'] : $deliverableUrl) ?></strong>
                         </a>
+                        <?php endif ?>
                         <span class="sb-deliv-meta">
                             <?= t('Submitted by') ?> <strong><?= $this->text->e($row['submitter']) ?></strong><?= '' ?>
                             <?php if ($row['date_submitted'] > 0): ?> &middot; <?= $this->dt->datetime($row['date_submitted']) ?><?php endif ?>

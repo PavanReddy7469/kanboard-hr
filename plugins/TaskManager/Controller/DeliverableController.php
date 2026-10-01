@@ -55,6 +55,7 @@ class DeliverableController extends BaseController
             'open_tasks'  => $this->deliverableModel->getTasksAwaitingEvidence($project['id']),
             'values'      => array('task_id' => $this->request->getIntegerParam('task_id')),
             'errors'      => array(),
+            'max_size'    => get_upload_max_size(),
         )));
     }
 
@@ -70,6 +71,7 @@ class DeliverableController extends BaseController
             'open_tasks' => $this->deliverableModel->getTasksAwaitingEvidence($project['id']),
             'values'     => array('task_id' => $this->request->getIntegerParam('task_id')),
             'errors'     => array(),
+            'max_size'   => get_upload_max_size(),
         )));
     }
 
@@ -93,6 +95,98 @@ class DeliverableController extends BaseController
     }
 
     /**
+     * Why the upload was refused, for the flash message. Empty when nothing
+     * was attached, which is not a failure - a link is evidence too.
+     *
+     * @var string
+     */
+    protected $uploadFailure = '';
+
+    /**
+     * Store the attached report, if there is one, and return its file id.
+     *
+     * PHP refuses an oversized upload before any of this runs: the request
+     * body is discarded and $_FILES arrives empty, with nothing to explain
+     * itself. That is what "upload of documents not working" looked like,
+     * and why the error codes below are reported in words rather than left
+     * to a silent redirect.
+     *
+     * @param  array $task
+     * @return integer  0 when nothing was attached
+     */
+    protected function storeEvidenceFile(array $task)
+    {
+        $this->uploadFailure = '';
+
+        /* A request that arrived with a body but left us neither fields nor
+           files is PHP saying it discarded the whole thing for exceeding
+           post_max_size - there is no entry in $_FILES to read an error code
+           from. Both have to be empty: $_FILES alone carries a real per-file
+           error code, and that deserves its own message below rather than
+           being swallowed by this one. */
+        if (empty($_POST) && empty($_FILES) && ! empty($_SERVER['CONTENT_LENGTH']) && (int) $_SERVER['CONTENT_LENGTH'] > 0) {
+            $this->uploadFailure = t('That file is larger than this server accepts (%s). Nothing was saved.', $this->helper->text->bytes(get_upload_max_size()));
+            return 0;
+        }
+
+        if (! isset($_FILES['evidence']) || ! is_array($_FILES['evidence'])) {
+            return 0;
+        }
+
+        $file = $_FILES['evidence'];
+        $error = isset($file['error']) ? (int) $file['error'] : UPLOAD_ERR_NO_FILE;
+
+        if ($error === UPLOAD_ERR_NO_FILE) {
+            return 0;
+        }
+
+        if ($error === UPLOAD_ERR_INI_SIZE || $error === UPLOAD_ERR_FORM_SIZE) {
+            $this->uploadFailure = t('That file is larger than this server accepts (%s). Nothing was saved.', $this->helper->text->bytes(get_upload_max_size()));
+            return 0;
+        }
+
+        if ($error === UPLOAD_ERR_PARTIAL) {
+            $this->uploadFailure = t('The upload was cut off before it finished. Nothing was saved.');
+            return 0;
+        }
+
+        if ($error !== UPLOAD_ERR_OK || empty($file['size'])) {
+            $this->uploadFailure = t('Unable to store that file. Nothing was saved.');
+            return 0;
+        }
+
+        $before = $this->taskFileModel->getAll($task['id']);
+        $known  = array();
+
+        foreach ($before as $row) {
+            $known[(int) $row['id']] = true;
+        }
+
+        /* uploadFiles() wants the shape of a multi-file field, and returns
+           only true or false - so the id of what it just stored is found by
+           looking at what is on the task now that was not a moment ago. */
+        $stored = $this->taskFileModel->uploadFiles($task['id'], array(
+            'name'     => array($file['name']),
+            'tmp_name' => array($file['tmp_name']),
+            'size'     => array($file['size']),
+            'error'    => array($file['error']),
+        ));
+
+        if (! $stored) {
+            $this->uploadFailure = t('Unable to store that file - check the permissions of the data folder. Nothing was saved.');
+            return 0;
+        }
+
+        foreach ($this->taskFileModel->getAll($task['id']) as $row) {
+            if (! isset($known[(int) $row['id']])) {
+                return (int) $row['id'];
+            }
+        }
+
+        return 0;
+    }
+
+    /**
      * Record a submission from an assignee.
      */
     public function save()
@@ -110,8 +204,19 @@ class DeliverableController extends BaseController
             return;
         }
 
-        if ($this->deliverableModel->normaliseUrl(isset($values['url']) ? $values['url'] : '') === '') {
-            $this->flash->failure(t('Enter a valid link (e.g. Google Drive, GitHub, Live URL).'));
+        /* Evidence can arrive either way now. An attached file goes through
+           Kanboard's own task-file model, so it lands beside everything else
+           on the task rather than in a second store with its own rules, and
+           the submission simply records which file it was. */
+        $values['file_id'] = $this->storeEvidenceFile($task);
+
+        $hasLink = $this->deliverableModel->normaliseUrl(isset($values['url']) ? $values['url'] : '') !== '';
+        $hasFile = $values['file_id'] > 0;
+
+        if ($this->uploadFailure !== '') {
+            $this->flash->failure($this->uploadFailure);
+        } elseif (! $hasLink && ! $hasFile) {
+            $this->flash->failure(t('Attach the document, or paste a link to it - a report needs one or the other.'));
         } elseif ($this->deliverableModel->submit($taskId, $this->userSession->getId(), $values)) {
             // Automatically move task to 'Rev' (In Review) column if present
             $columns = $this->columnModel->getAll($project['id']);

@@ -3,10 +3,12 @@
 </div>
 
 <p class="alert alert-info" style="border-radius: 8px; font-size: 0.88rem; line-height: 1.5;">
-    <i class="fa fa-info-circle"></i> <?= t('Provide a Google Drive document, Figma design, GitHub repository, or live project demo link as completion evidence. Once submitted, an Administrator will verify and approve it before the task is marked completed.') ?>
+    <i class="fa fa-info-circle"></i> <?= t('Attach the document itself, or paste a link to where it lives - a Drive file, a Figma design, a repository, a live demo. An administrator verifies it before the task is marked completed.') ?>
 </p>
 
-<form method="post" action="<?= $this->url->href('DeliverableController', 'save', array('plugin' => 'TaskManager', 'project_id' => $project['id'])) ?>" autocomplete="off">
+<?php /* multipart, or the browser posts the filename as ordinary text and
+         the file never leaves the machine. */ ?>
+<form method="post" enctype="multipart/form-data" action="<?= $this->url->href('DeliverableController', 'save', array('plugin' => 'TaskManager', 'project_id' => $project['id'])) ?>" autocomplete="off">
     <?= $this->form->csrf() ?>
 
     <div style="margin-bottom: 14px;">
@@ -27,11 +29,35 @@
         <p class="alert alert-success" style="border-radius: 8px; font-size: 0.85rem;"><i class="fa fa-check"></i> <?= t('All open tasks in this project already have verified deliverables.') ?></p>
     <?php endif ?>
 
+    <?php /* The file first: it is the one people were being told to do
+             somewhere else and link back to. Neither field is required on
+             its own - the controller insists on one of the two, which is a
+             rule the browser cannot express. */ ?>
+    <div style="margin-bottom: 14px;">
+        <label for="form-evidence" style="font-weight: 600; font-size: 13px; margin-bottom: 4px; display: block;">
+            <i class="fa fa-paperclip"></i> <?= t('Attach the report') ?>:
+        </label>
+        <input type="file" name="evidence" id="form-evidence"
+               style="width: 100%; border-radius: 8px; padding: 8px 12px; border: 1px solid #cbd5e1; background: #f8fafc; font-size: 0.86rem;">
+        <p style="font-size: 0.78rem; color: #64748b; margin: 6px 0 0;">
+            <?= t('PDF, Word, Excel, text, images, drawings, archives - any file type.') ?>
+            <?php if ($max_size > 0): ?>
+                <strong><?= t('Up to %s.', $this->text->bytes($max_size)) ?></strong>
+            <?php endif ?>
+        </p>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px; margin: 0 0 14px; color: #94a3b8; font-size: 0.78rem; font-weight: 700; text-transform: uppercase;">
+        <span style="flex: 1; height: 1px; background: #e2e8f0;"></span>
+        <?= t('or') ?>
+        <span style="flex: 1; height: 1px; background: #e2e8f0;"></span>
+    </div>
+
     <div style="margin-bottom: 14px;">
         <label for="form-url" style="font-weight: 600; font-size: 13px; margin-bottom: 4px; display: block;">
-            <i class="fa fa-link"></i> <?= t('Google Drive / Live Document Link') ?>:
+            <i class="fa fa-link"></i> <?= t('Link to where it lives') ?>:
         </label>
-        <?= $this->form->text('url', $values, $errors, array('placeholder="https://drive.google.com/file/d/... or https://..."', 'required', 'style="width: 100%; border-radius: 8px; padding: 8px 12px; border: 1px solid #cbd5e1;"'), 'form-input') ?>
+        <?= $this->form->text('url', $values, $errors, array('placeholder="https://drive.google.com/file/d/... or https://..."', 'style="width: 100%; border-radius: 8px; padding: 8px 12px; border: 1px solid #cbd5e1;"'), 'form-input') ?>
     </div>
 
     <div style="margin-bottom: 14px;">

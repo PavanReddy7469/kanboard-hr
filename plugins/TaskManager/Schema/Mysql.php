@@ -4,7 +4,7 @@ namespace Kanboard\Plugin\TaskManager\Schema;
 
 use PDO;
 
-const VERSION = 10;
+const VERSION = 11;
 
 function version_1(PDO $pdo)
 {
@@ -241,4 +241,18 @@ function version_10(PDO $pdo)
        locking the current users out of their own instance to prove a point
        would be a poor trade. */
     $pdo->exec("ALTER TABLE users ADD COLUMN must_change_password TINYINT(1) NOT NULL DEFAULT 0");
+}
+
+function version_11(PDO $pdo)
+{
+    /* Completion evidence could only ever be a link. Plenty of evidence is
+       a file - a scanned sign-off, a test report, a drawing - and telling
+       somebody to upload it somewhere else first and paste the link back is
+       asking them to do the filing twice.
+
+       The file itself goes through Kanboard's own task-file storage, so
+       there is one place attachments live and one place they are cleaned up
+       from; this column only records which one is the evidence. 0 means the
+       submission is a link, which is every row that already exists. */
+    $pdo->exec("ALTER TABLE taskmanager_deliverables ADD COLUMN file_id INT NOT NULL DEFAULT 0");
 }
