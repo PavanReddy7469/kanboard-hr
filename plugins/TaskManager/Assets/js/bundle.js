@@ -485,6 +485,15 @@
                 root.classList.remove('is-saving');
                 root.classList.add('is-saved');
                 setTimeout(function () { root.classList.remove('is-saved'); }, 900);
+
+                /* Some changes move more than the thing that was clicked.
+                   Setting a priority is a queue move: every task at or below
+                   the new position shifts by one, so the rest of the column
+                   on screen is now wrong. The server says so rather than the
+                   script guessing which fields behave that way. */
+                if (data.reload) {
+                    setTimeout(function () { window.location.reload(); }, 450);
+                }
             })
             .catch(function () {
                 /* Say so rather than leaving a pill showing something untrue. */

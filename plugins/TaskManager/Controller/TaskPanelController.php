@@ -85,8 +85,8 @@ class TaskPanelController extends BaseController
                 + $this->projectUserRoleModel->getAssignableUsersList($task['project_id'], false),
             'can_assign'       => $this->helper->user->hasProjectAccess('TaskModificationController', 'update', $task['project_id'])
                 && $this->helper->projectRole->canChangeAssignee($task),
-            'priority_options' => $this->getPriorityOptions($project),
-            'priority_classes' => $this->getPriorityClasses($project),
+            'priority_options' => $this->getPriorityChoices($project, 0),
+            'priority_classes' => $this->getPriorityChoices($project, 1),
             'can_prioritise'   => $this->helper->user->hasProjectAccess('TaskModificationController', 'update', $task['project_id']),
         )));
     }
@@ -98,52 +98,31 @@ class TaskPanelController extends BaseController
      * @return integer
      */
     /**
-     * The priority numbers this project uses. Kanboard lets each project set
-     * its own range, so these are read from the project rather than assumed.
+     * The positions a priority picker may offer: every place in the queue,
+     * one more for a task joining it, and None for leaving it.
      *
-     * @param  array $project
+     * Not the project's priority_end. That is a ceiling the queue grows
+     * past - eighteen tasks need eighteen positions whatever the project
+     * settings say - and PriorityModel widens it as the queue grows.
+     *
+     * @param  array   $project
+     * @param  integer $which  0 for labels, 1 for css classes
      * @return array
      */
-    protected function getPriorityOptions(array $project)
+    protected function getPriorityChoices(array $project, $which)
     {
-        $options = array();
+        $start  = max(1, (int) $project['priority_start']);
+        $length = $this->priorityModel->getQueueLength($project['id']);
 
-        foreach ($this->priorityRange($project) as $p) {
-            $options[$p] = $p > 0 ? 'P'.$p : t('None');
-        }
+        $options = array(0 => t('None'));
+        $classes = array(0 => $this->helper->taskTree->getPriorityClass(0));
 
-        return $options;
-    }
-
-    /**
-     * @param  array $project
-     * @return array
-     */
-    protected function getPriorityClasses(array $project)
-    {
-        $classes = array();
-
-        foreach ($this->priorityRange($project) as $p) {
+        foreach (range($start, $start + $length) as $p) {
+            $options[$p] = 'P'.$p;
             $classes[$p] = $this->helper->taskTree->getPriorityClass($p);
         }
 
-        return $classes;
-    }
-
-    /**
-     * @param  array $project
-     * @return array
-     */
-    protected function priorityRange(array $project)
-    {
-        $start = (int) $project['priority_start'];
-        $end   = (int) $project['priority_end'];
-
-        if ($start > $end) {
-            list($start, $end) = array($end, $start);
-        }
-
-        return range($start, $end);
+        return $which === 0 ? $options : $classes;
     }
 
     protected function getDuration(array $task)

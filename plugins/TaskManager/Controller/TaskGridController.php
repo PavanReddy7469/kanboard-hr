@@ -119,17 +119,14 @@ class TaskGridController extends BaseController
            Task Lists tab is gone. */
         $params['can_manage_lists'] = $this->helper->user->hasProjectAccess('TaskGroupController', 'create', $project['id']);
 
-        /* The Priority picker's list. The project decides its own range -
-           Kanboard stores priority as a plain integer between
-           priority_start and priority_end - so the options are built from
-           the project rather than hard-coded P1-P5. */
-        $params['priority_options'] = array();
-        $params['priority_classes'] = array();
-
-        foreach (range((int) $project['priority_start'], (int) $project['priority_end']) as $p) {
-            $params['priority_options'][$p] = $p > 0 ? 'P'.$p : t('None');
-            $params['priority_classes'][$p] = $this->helper->taskTree->getPriorityClass($p);
-        }
+        /* The Priority picker's list. A priority is a queue position now, so
+           the choices are the positions that exist - 1..N over the tasks
+           holding one - plus one more for a task joining the queue, and
+           None for leaving it. Not the project's priority_end: that is a
+           ceiling the queue grows past, and offering a position the queue
+           does not have would just clamp. */
+        list($params['priority_options'], $params['priority_classes']) =
+            $this->buildPriorityChoices($project);
 
         /* Setting a priority is an ordinary task edit. */
         $params['can_prioritise'] = $this->helper->user->hasProjectAccess('TaskModificationController', 'update', $project['id']);
@@ -171,6 +168,30 @@ class TaskGridController extends BaseController
         }
 
         $this->response->html($this->helper->layout->project('TaskManager:grid/tasks', $params, 'TaskManager:project/no_sidebar'));
+    }
+
+    /**
+     * The positions a priority picker may offer on this project.
+     *
+     * @param  array $project
+     * @return array  array(id => label, id => css class)
+     */
+    protected function buildPriorityChoices(array $project)
+    {
+        $start  = max(1, (int) $project['priority_start']);
+        $length = $this->priorityModel->getQueueLength($project['id']);
+
+        $options = array(0 => t('None'));
+        $classes = array(0 => $this->helper->taskTree->getPriorityClass(0));
+
+        /* $length + 1 positions: every place in the queue, and the place
+           after it for a task that is not in the queue yet. */
+        foreach (range($start, $start + $length) as $p) {
+            $options[$p] = 'P'.$p;
+            $classes[$p] = $this->helper->taskTree->getPriorityClass($p);
+        }
+
+        return array($options, $classes);
     }
 
     /**

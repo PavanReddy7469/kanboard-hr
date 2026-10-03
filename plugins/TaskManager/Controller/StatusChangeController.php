@@ -104,12 +104,15 @@ class StatusChangeController extends BaseController
     /**
      * Set a task's priority from the grid.
      *
-     * The third thing picked with the same pill. Priority is a plain integer
-     * on the task, and what counts as a valid one is the project's business:
-     * Kanboard lets each project set priority_start and priority_end, so the
-     * range is read from the project rather than assumed to be P1-P5. The
-     * menu is built from the same range, but a URL can say anything, so the
-     * bound is checked here too.
+     * A priority is a queue position, not a band, so this is a move rather
+     * than a field write: choosing 3 puts the task third and pushes whatever
+     * was third and below down by one. PriorityModel does the arithmetic over
+     * the whole queue, which is why the first use on a project where sixteen
+     * tasks share P5 sorts all of them out at once.
+     *
+     * Because other rows move too, the response asks the page to reload -
+     * repainting only the pill that was clicked would leave the rest of the
+     * column showing numbers that are no longer true.
      */
     public function priority()
     {
@@ -117,37 +120,29 @@ class StatusChangeController extends BaseController
         $this->checkReusableGETCSRFParam();
 
         $projectId = (int) $task['project_id'];
-        $priority  = $this->request->getIntegerParam('priority');
+        $rank      = $this->request->getIntegerParam('priority');
 
         if (! $this->helper->projectRole->canUpdateTask($task)) {
             throw new AccessForbiddenException(t("You don't have the permission to change this task"));
         }
 
-        $project = $this->projectModel->getById($projectId);
-        $start   = (int) $project['priority_start'];
-        $end     = (int) $project['priority_end'];
-
-        if ($start > $end) {
-            list($start, $end) = array($end, $start);
+        /* 0 is "no priority": the task leaves the queue. Anything else is a
+           position, and out-of-range positions are clamped to the ends of
+           the queue rather than refused - asking for 99 in a queue of 18
+           plainly means "last". */
+        if ($rank < 0) {
+            $rank = 0;
         }
 
-        if ($priority < $start || $priority > $end) {
-            throw new AccessForbiddenException(t('That priority is outside the range this project uses.'));
-        }
-
-        $saved = (int) $task['priority'] === $priority
-            ? true
-            : $this->taskModificationModel->update(array('id' => $task['id'], 'priority' => $priority));
-
-        if (! $saved) {
-            $this->response->status(400);
-            return;
-        }
+        $assigned = $this->priorityModel->moveToRank($projectId, $task['id'], $rank);
 
         $this->response->json(array(
-            'ok'    => true,
-            'label' => $priority > 0 ? 'P'.$priority : t('None'),
-            'class' => 'zs-prio '.$this->helper->taskTree->getPriorityClass($priority),
+            'ok'     => true,
+            'label'  => $assigned > 0 ? 'P'.$assigned : t('None'),
+            'class'  => 'zs-prio '.$this->helper->taskTree->getPriorityClass($assigned),
+            /* Only when something actually moved. Repeating the same choice
+               writes nothing and should not bounce the page. */
+            'reload' => $assigned !== (int) $task['priority'],
         ));
     }
 

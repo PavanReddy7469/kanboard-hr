@@ -15,10 +15,18 @@ use Kanboard\Model\TaskModel as CoreTaskModel;
  * has to be something that happens on its own rather than a tidy-up someone
  * remembers to do.
  *
- * What is deliberately NOT done here: numbers are not made unique. Two tasks
- * can both be P2 and stay that way. Ranking every task against every other
- * would mean renumbering nearly the whole project the first time this ran,
- * and P1-P10 would stop being a scale and become a list position.
+ * Priorities are also unique. A number is a queue position, so two tasks
+ * cannot hold the same one: setting a task to 3 puts it third and pushes
+ * whatever was third and below down by one. This was deliberately not done
+ * at first, on the grounds that it turns P1-P10 from a scale into a list
+ * position and renumbers most of the project the first time it runs. Both
+ * of those are true; they are now the point rather than the objection,
+ * because a scale on which sixteen of eighteen tasks read P5 is not
+ * ordering anything.
+ *
+ * The renumber happens when somebody sets a priority, not on page load. A
+ * GET that quietly rewrites eighteen rows is a surprise nobody asked for,
+ * and the first deliberate change tidies the whole queue anyway.
  *
  * @package Kanboard\Plugin\TaskManager\Model
  */
@@ -78,6 +86,146 @@ class PriorityModel extends Base
         $this->db->closeTransaction();
 
         return $changed;
+    }
+
+    /**
+     * Move a task to a queue position, pushing everything at or below that
+     * position down by one, and renumber the queue so the values run 1..N
+     * with no repeats and no gaps.
+     *
+     * Works whatever state the queue was in. The first call on a project
+     * where sixteen tasks share P5 sorts all of them out, because the result
+     * is computed from the whole ordered queue rather than patched into it.
+     *
+     * @param  integer $projectId
+     * @param  integer $taskId
+     * @param  integer $rank   the position asked for; clamped to the queue
+     * @return integer  the position actually given
+     */
+    public function moveToRank($projectId, $taskId, $rank)
+    {
+        $projectId = (int) $projectId;
+        $taskId    = (int) $taskId;
+        $start     = $this->getScaleStart($projectId);
+
+        $ordered = array();
+
+        foreach ($this->getQueuedTasks($projectId) as $task) {
+            $ordered[] = (int) $task['id'];
+        }
+
+        $assignments = self::reorder($ordered, $taskId, (int) $rank, $start);
+
+        /* Read the current numbers once so only the rows that actually move
+           are written. On a settled queue a repeat of the same choice writes
+           nothing at all. */
+        $current = array();
+
+        foreach ($this->db->table(CoreTaskModel::TABLE)->eq('project_id', $projectId)->columns('id', 'priority')->findAll() as $row) {
+            $current[(int) $row['id']] = (int) $row['priority'];
+        }
+
+        $this->db->startTransaction();
+
+        foreach ($assignments as $id => $priority) {
+            if (! isset($current[$id]) || $current[$id] !== $priority) {
+                /* Direct update, not taskModificationModel: a renumber of
+                   fifteen bystanders should not put fifteen notifications
+                   through the queue. Same reasoning as closeGaps(). */
+                $this->db->table(CoreTaskModel::TABLE)->eq('id', $id)->update(array('priority' => $priority));
+            }
+        }
+
+        $this->db->closeTransaction();
+
+        /* A queue of eighteen needs a scale that reaches eighteen, or the
+           Edit form's own dropdown - which is built from the project's range
+           - could not show the number this just assigned. The scale only
+           ever grows. */
+        $this->widenScale($projectId, $start + max(0, count($assignments) - 1));
+
+        return isset($assignments[$taskId]) ? $assignments[$taskId] : 0;
+    }
+
+    /**
+     * The arithmetic, with no database in it.
+     *
+     * @param  array   $orderedIds  the queue as it stands, best first
+     * @param  integer $taskId      the task being moved
+     * @param  integer $rank        the position asked for
+     * @param  integer $start       the number the scale begins at
+     * @return array   id => priority
+     */
+    public static function reorder(array $orderedIds, $taskId, $rank, $start = 1)
+    {
+        $taskId = (int) $taskId;
+        $start  = max(1, (int) $start);
+
+        /* Pull it out wherever it was - including "nowhere", when the task
+           had no priority and is joining the queue for the first time. */
+        $queue = array();
+
+        foreach ($orderedIds as $id) {
+            if ((int) $id !== $taskId) {
+                $queue[] = (int) $id;
+            }
+        }
+
+        /* Rank 0 means "no priority": the task leaves the queue and the rest
+           closes up behind it. */
+        $leaving = (int) $rank <= 0;
+
+        if (! $leaving) {
+            $position = (int) $rank - $start;          // 0-based
+            $position = max(0, min($position, count($queue)));
+            array_splice($queue, $position, 0, array($taskId));
+        }
+
+        $assignments = array();
+
+        foreach ($queue as $index => $id) {
+            $assignments[$id] = $start + $index;
+        }
+
+        if ($leaving) {
+            $assignments[$taskId] = 0;
+        }
+
+        return $assignments;
+    }
+
+    /**
+     * Raise a project's priority_end so the scale covers the queue. Never
+     * lowers it: somebody may have set a wider range on purpose.
+     *
+     * @param  integer $projectId
+     * @param  integer $needed
+     * @return void
+     */
+    protected function widenScale($projectId, $needed)
+    {
+        $project = $this->projectModel->getById($projectId);
+
+        if (empty($project) || (int) $project['priority_end'] >= (int) $needed) {
+            return;
+        }
+
+        $this->db
+            ->table(\Kanboard\Model\ProjectModel::TABLE)
+            ->eq('id', (int) $projectId)
+            ->update(array('priority_end' => (int) $needed));
+    }
+
+    /**
+     * How many positions the queue has - so a picker can offer 1..N, and one
+     * more for a task joining it.
+     *
+     * @param  integer $projectId
+     * @return integer
+     */
+    public function getQueueLength($projectId)
+    {
+        return count($this->getQueuedTasks($projectId));
     }
 
     /**
