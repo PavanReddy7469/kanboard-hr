@@ -101,7 +101,11 @@ class TaskGridController extends BaseController
            can carry the chip the Task Lists page used to show. Every list is
            passed whether or not it has tasks: an empty list still needs a
            header, otherwise creating one appears to do nothing. */
-        $milestones = $this->milestoneModel->getList($project['id']);
+        /* false: without it the list is prepended with 0 => "No milestone",
+           which then reads as a milestone named "No milestone" on every
+           header that has none. Leaving 0 out of the map makes the isset()
+           below fall through to '' and no chip is drawn. */
+        $milestones = $this->milestoneModel->getList($project['id'], false);
         $params['task_lists'] = array();
 
         foreach ($this->taskListModel->getAll($project['id']) as $taskList) {

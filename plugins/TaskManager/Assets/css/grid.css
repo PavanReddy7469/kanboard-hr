@@ -346,11 +346,16 @@
     border-bottom: 1px solid var(--sb-200);
 }
 
+/* Everything in the header flows from the left. It is tempting to push the
+   progress and the actions to the right with margin-left:auto, and that is
+   what the Task Lists page did - but that page was a narrow table that fit
+   the window. This row spans the task grid, which is wider than the window
+   and scrolls sideways, so "the right-hand end" is off-screen: Edit and
+   Remove landed at x=1588 in a viewport that ends at 1509. */
 .zg-grouphead {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    gap: 18px;
     flex-wrap: wrap;
 }
 
@@ -388,7 +393,6 @@
     display: flex;
     align-items: center;
     gap: 14px;
-    margin-left: auto;
 }
 
 .zg-groupdone {
