@@ -29,91 +29,20 @@ class TaskGroupController extends BaseController
      */
     public function index()
     {
-        $project    = $this->getProject();
-        $taskLists  = $this->taskListModel->getAll($project['id']);
-        $milestones = $this->milestoneModel->getList($project['id']);
+        /* Task Lists is no longer a page. Its content is the Tasks tab
+           grouped by list, so this route sends people there rather than
+           404ing a link somebody bookmarked or a redirect left behind in the
+           create/edit/remove flows. */
+        $project = $this->getProject();
 
-        $tasksByList = $this->getTasksGroupedByList($project['id']);
-
-        foreach ($taskLists as &$tl) {
-            $listId = (int) $tl['id'];
-            $tasks  = isset($tasksByList[$listId]) ? $tasksByList[$listId] : array();
-
-            $tl['tasks']           = $tasks;
-            $tl['total_tasks']     = count($tasks);
-            $tl['closed_tasks']    = $this->countClosed($tasks);
-            $tl['progress']        = $tl['total_tasks'] > 0
-                ? (int) round(($tl['closed_tasks'] / $tl['total_tasks']) * 100)
-                : 0;
-            $tl['milestone_title'] = isset($milestones[$tl['milestone_id']]) ? $milestones[$tl['milestone_id']] : t('None');
-        }
-
-        unset($tl);
-
-        $unfiled = isset($tasksByList[0]) ? $tasksByList[0] : array();
-
-        $this->response->html($this->helper->layout->app('TaskManager:task_list/index', array(
-            'project'    => $project,
-            'task_lists' => $taskLists,
-            'unfiled'    => $unfiled,
-            'title'      => t('Task Lists') . ' — ' . $project['name'],
-        )));
+        $this->response->redirect($this->helper->url->to('TaskGridController', 'show', array(
+            'plugin'     => 'TaskManager',
+            'project_id' => $project['id'],
+            'group_by'   => 'task_list',
+        )), true);
     }
 
-    /**
-     * Every task in the project, open and closed, keyed by its task list.
-     *
-     * Closed tasks are included deliberately: they are what the progress bar
-     * counts, and a list that reads 80% done while showing only the four
-     * tasks still open would be unreadable.
-     *
-     * @param  integer $projectId
-     * @return array  task_list_id => tasks
-     */
-    protected function getTasksGroupedByList($projectId)
-    {
-        /* The same lookup the overview tree uses, so a person's name reads
-           identically on both pages. */
-        $users   = $this->userModel->getActiveUsersList();
-        $columns = $this->columnModel->getList($projectId);
 
-        $tasks = $this->db
-            ->table(\Kanboard\Model\TaskModel::TABLE)
-            ->eq('project_id', $projectId)
-            ->asc('task_list_id')
-            ->asc('position')
-            ->asc('id')
-            ->findAll();
-
-        $grouped = array();
-
-        foreach ($tasks as $task) {
-            $task['assignee_name'] = isset($users[$task['owner_id']]) ? $users[$task['owner_id']] : t('Unassigned');
-            $task['column_title']  = isset($columns[$task['column_id']]) ? $columns[$task['column_id']] : '';
-            $task['is_closed']     = empty($task['is_active']);
-
-            $grouped[(int) $task['task_list_id']][] = $task;
-        }
-
-        return $grouped;
-    }
-
-    /**
-     * @param  array $tasks
-     * @return integer
-     */
-    protected function countClosed(array $tasks)
-    {
-        $closed = 0;
-
-        foreach ($tasks as $task) {
-            if (! empty($task['is_closed'])) {
-                $closed++;
-            }
-        }
-
-        return $closed;
-    }
 
     public function create(array $values = array(), array $errors = array())
     {
@@ -137,7 +66,7 @@ class TaskGroupController extends BaseController
 
         if ($valid && $this->taskListModel->create($values) !== false) {
             $this->flash->success(t('Task list created successfully.'));
-            $this->response->redirect($this->helper->url->to('ProjectOverviewController', 'show', array('project_id' => $project['id'])), true);
+            $this->response->redirect($this->helper->url->to('TaskGridController', 'show', array('plugin' => 'TaskManager', 'project_id' => $project['id'], 'group_by' => 'task_list')), true);
             return;
         }
 
@@ -169,7 +98,7 @@ class TaskGroupController extends BaseController
 
         if ($valid && $this->taskListModel->update($values)) {
             $this->flash->success(t('Task list updated successfully.'));
-            $this->response->redirect($this->helper->url->to('ProjectOverviewController', 'show', array('project_id' => $project['id'])), true);
+            $this->response->redirect($this->helper->url->to('TaskGridController', 'show', array('plugin' => 'TaskManager', 'project_id' => $project['id'], 'group_by' => 'task_list')), true);
             return;
         }
 
@@ -199,7 +128,7 @@ class TaskGroupController extends BaseController
             $this->flash->failure(t('Unable to remove this task list.'));
         }
 
-        $this->response->redirect($this->helper->url->to('ProjectOverviewController', 'show', array('project_id' => $project['id'])));
+        $this->response->redirect($this->helper->url->to('TaskGridController', 'show', array('plugin' => 'TaskManager', 'project_id' => $project['id'], 'group_by' => 'task_list')));
     }
 
     /**

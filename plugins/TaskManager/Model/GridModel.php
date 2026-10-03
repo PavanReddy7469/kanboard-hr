@@ -145,6 +145,7 @@ class GridModel extends Base
             'status'   => t('Status'),
             'owner'    => t('Owner'),
             'priority' => t('Priority'),
+            'task_list' => t('Task List'),
         );
     }
 
@@ -347,7 +348,7 @@ class GridModel extends Base
         }
 
         $query = $this->db->table(TaskModel::TABLE)
-            ->columns('id', 'title', 'project_id', 'column_id', 'owner_id', 'is_active', 'priority', 'color_id', 'reference',
+            ->columns('id', 'title', 'project_id', 'column_id', 'owner_id', 'is_active', 'priority', 'color_id', 'reference', 'task_list_id',
                       'date_started', 'date_due', 'date_creation', 'date_completed',
                       'time_estimated', 'time_spent', 'position')
             ->in('project_id', $projectIds);
@@ -423,6 +424,7 @@ class GridModel extends Base
                 'date_due'   => (int) $task['date_due'],
                 'duration'   => $this->getDuration($task['date_started'], $task['date_due']),
                 'priority'   => (int) $task['priority'],
+                'task_list_id' => isset($task['task_list_id']) ? (int) $task['task_list_id'] : 0,
                 'progress'   => isset($progress[$id]) ? $progress[$id] : 0,
                 'color_id'   => $task['color_id'],
                 'is_overdue' => ! empty($task['date_due']) && $task['is_active'] == 1 && $task['date_due'] < (int) strtotime('today'),
@@ -593,13 +595,21 @@ class GridModel extends Base
      * @param  string $grouping
      * @return array   label => rows
      */
-    public function groupRows(array $rows, $grouping)
+    public function groupRows(array $rows, $grouping, array $taskLists = array(), ?array $allRows = null)
     {
-        if ($grouping === 'none' || ! array_key_exists($grouping, $this->getGroupings())) {
-            return array('' => $rows);
+        if ($allRows === null) {
+            $allRows = $rows;
         }
 
-        $groups = array();
+        if ($grouping === 'none' || ! array_key_exists($grouping, $this->getGroupings())) {
+            return array(array('key' => '', 'label' => '', 'meta' => array(), 'rows' => $rows));
+        }
+
+        if ($grouping === 'task_list') {
+            return $this->groupRowsByTaskList($rows, $taskLists, $allRows);
+        }
+
+        $buckets = array();
 
         foreach ($rows as $row) {
             if ($grouping === 'status') {
@@ -610,12 +620,118 @@ class GridModel extends Base
                 $key = $row['priority'] > 0 ? 'P'.$row['priority'] : t('No priority');
             }
 
-            $groups[$key][] = $row;
+            $buckets[$key][] = $row;
         }
 
-        ksort($groups);
+        ksort($buckets);
+
+        $groups = array();
+
+        foreach ($buckets as $label => $bucket) {
+            $groups[] = array('key' => $label, 'label' => $label, 'meta' => array(), 'rows' => $bucket);
+        }
 
         return $groups;
+    }
+
+    /**
+     * One group per task list, with the tasks in no list last.
+     *
+     * The counts come from $allRows rather than $rows: $rows is one page, and
+     * a header that said "2 of 3 done" because the rest of the list was on
+     * page two would be worse than no header at all.
+     *
+     * A task whose list has been deleted still has the old id on it. It falls
+     * through to the unfiled group rather than vanishing, which is the whole
+     * reason that group exists.
+     *
+     * @param  array $rows      the rows to display
+     * @param  array $taskLists id, title, milestone_title
+     * @param  array $allRows   every row in scope, for the counts
+     * @return array
+     */
+    protected function groupRowsByTaskList(array $rows, array $taskLists, array $allRows)
+    {
+        $shown = array();
+        $all   = array();
+
+        foreach ($rows as $row) {
+            $shown[(int) $row['task_list_id']][] = $row;
+        }
+
+        foreach ($allRows as $row) {
+            $all[(int) $row['task_list_id']][] = $row;
+        }
+
+        $known  = array();
+        $groups = array();
+
+        foreach ($taskLists as $list) {
+            $id = (int) $list['id'];
+            $known[$id] = true;
+
+            $groups[] = $this->describeTaskListGroup(
+                $id,
+                $list['title'],
+                isset($list['milestone_title']) ? $list['milestone_title'] : '',
+                isset($shown[$id]) ? $shown[$id] : array(),
+                isset($all[$id]) ? $all[$id] : array()
+            );
+        }
+
+        $unfiledShown = array();
+        $unfiledAll   = array();
+
+        foreach ($shown as $id => $bucket) {
+            if (! isset($known[$id])) {
+                $unfiledShown = array_merge($unfiledShown, $bucket);
+            }
+        }
+
+        foreach ($all as $id => $bucket) {
+            if (! isset($known[$id])) {
+                $unfiledAll = array_merge($unfiledAll, $bucket);
+            }
+        }
+
+        if (! empty($unfiledAll) || empty($groups)) {
+            $groups[] = $this->describeTaskListGroup(0, t('Not in any list'), '', $unfiledShown, $unfiledAll);
+        }
+
+        return $groups;
+    }
+
+    /**
+     * @param  integer $id
+     * @param  string  $title
+     * @param  string  $milestone
+     * @param  array   $rows   what to draw
+     * @param  array   $forCount what to count
+     * @return array
+     */
+    protected function describeTaskListGroup($id, $title, $milestone, array $rows, array $forCount)
+    {
+        $total  = count($forCount);
+        $closed = 0;
+
+        foreach ($forCount as $row) {
+            if (empty($row['is_active'])) {
+                $closed++;
+            }
+        }
+
+        return array(
+            'key'   => 'tl-'.$id,
+            'label' => $title,
+            'rows'  => $rows,
+            'meta'  => array(
+                'task_list_id' => (int) $id,
+                'milestone'    => $milestone !== null && $milestone !== t('None') ? $milestone : '',
+                'total'        => $total,
+                'closed'       => $closed,
+                'progress'     => $total > 0 ? (int) round(($closed / $total) * 100) : 0,
+            ),
+        );
     }
 
     /**

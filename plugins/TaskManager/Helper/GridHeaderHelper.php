@@ -65,11 +65,26 @@ class GridHeaderHelper extends Base
     }
 
     /**
+     * @return array  key => label
+     */
+    public function getGroupings()
+    {
+        return $this->gridModel->getGroupings();
+    }
+
+    /**
+     * The grouping currently on screen, validated exactly as the controller
+     * validates it - including the default - so the picker can never claim a
+     * grouping the table is not using.
+     *
      * @return string
      */
     public function getGroupBy()
     {
-        return $this->request->getStringParam('group_by', 'none');
+        $groupings = $this->getGroupings();
+        $groupBy   = $this->request->getStringParam('group_by', 'task_list');
+
+        return array_key_exists($groupBy, $groupings) ? $groupBy : 'task_list';
     }
 
     /**

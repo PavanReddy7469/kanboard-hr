@@ -102,6 +102,56 @@ class StatusChangeController extends BaseController
     }
 
     /**
+     * Set a task's priority from the grid.
+     *
+     * The third thing picked with the same pill. Priority is a plain integer
+     * on the task, and what counts as a valid one is the project's business:
+     * Kanboard lets each project set priority_start and priority_end, so the
+     * range is read from the project rather than assumed to be P1-P5. The
+     * menu is built from the same range, but a URL can say anything, so the
+     * bound is checked here too.
+     */
+    public function priority()
+    {
+        $task = $this->getTask();
+        $this->checkReusableGETCSRFParam();
+
+        $projectId = (int) $task['project_id'];
+        $priority  = $this->request->getIntegerParam('priority');
+
+        if (! $this->helper->projectRole->canUpdateTask($task)) {
+            throw new AccessForbiddenException(t("You don't have the permission to change this task"));
+        }
+
+        $project = $this->projectModel->getById($projectId);
+        $start   = (int) $project['priority_start'];
+        $end     = (int) $project['priority_end'];
+
+        if ($start > $end) {
+            list($start, $end) = array($end, $start);
+        }
+
+        if ($priority < $start || $priority > $end) {
+            throw new AccessForbiddenException(t('That priority is outside the range this project uses.'));
+        }
+
+        $saved = (int) $task['priority'] === $priority
+            ? true
+            : $this->taskModificationModel->update(array('id' => $task['id'], 'priority' => $priority));
+
+        if (! $saved) {
+            $this->response->status(400);
+            return;
+        }
+
+        $this->response->json(array(
+            'ok'    => true,
+            'label' => $priority > 0 ? 'P'.$priority : t('None'),
+            'class' => 'zs-prio '.$this->helper->taskTree->getPriorityClass($priority),
+        ));
+    }
+
+    /**
      * The same, for a subtask - which carries its own assignee rather than
      * inheriting the task's.
      */

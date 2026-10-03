@@ -100,19 +100,75 @@ $sortLink = function ($column, $label) use ($base, $order, $direction) {
                 </tbody>
             <?php endif ?>
 
-            <?php foreach ($groups as $groupLabel => $groupRows): ?>
+            <?php foreach ($groups as $group): ?>
+                <?php
+                /* A task-list group carries meta - a count, a milestone, how
+                   much of it is done - and folds. The plain groupings (status,
+                   owner, priority) carry none and stay as they were: their
+                   label is free text and would not survive being used as a
+                   class name. */
+                $groupLabel = $group['label'];
+                $groupRows  = $group['rows'];
+                $meta       = $group['meta'];
+                $foldKey    = empty($meta) ? '' : $group['key'];
+                $rowClass   = $foldKey === '' ? '' : 'tree-row '.$foldKey;
+                ?>
                 <tbody>
-                    <?php if ($groupLabel !== ''): ?>
+                    <?php if ($groupLabel !== '' && empty($meta)): ?>
                         <tr class="zg-grouprow">
                             <td colspan="10">
                                 <span class="zg-grouplabel"><?= $this->text->e($groupLabel) ?></span>
                                 <span class="zg-groupcount"><?= count($groupRows) ?></span>
                             </td>
                         </tr>
+                    <?php elseif (! empty($meta)): ?>
+                        <?php $isUnfiled = $meta['task_list_id'] === 0 ?>
+                        <tr class="zg-grouprow zg-grouprow-list <?= $isUnfiled ? 'is-unfiled' : '' ?>">
+                            <td colspan="10">
+                                <span class="zg-grouphead">
+                                    <span class="zg-groupmain">
+                                        <span class="tree-toggle" data-zg-tree="<?= $foldKey ?>" data-tree-key="<?= $foldKey ?>"
+                                              role="button" tabindex="0" title="<?= t('Show or hide the tasks in this list') ?>">
+                                            <i class="fa fa-minus-square-o tree-icon" aria-hidden="true"></i>
+                                        </span>
+                                        <i class="fa <?= $isUnfiled ? 'fa-inbox' : 'fa-folder-o' ?> zg-groupicon" aria-hidden="true"></i>
+                                        <span class="zg-grouplabel"><?= $this->text->e($groupLabel) ?></span>
+                                        <span class="zg-groupcount"><?= (int) $meta['total'] ?></span>
+                                        <?php if ($meta['milestone'] !== ''): ?>
+                                            <span class="zg-milestone"><i class="fa fa-flag" aria-hidden="true"></i> <?= $this->text->e($meta['milestone']) ?></span>
+                                        <?php endif ?>
+                                    </span>
+
+                                    <span class="zg-groupstats">
+                                        <span class="zg-groupdone"><?= t('%d of %d done', (int) $meta['closed'], (int) $meta['total']) ?></span>
+                                        <span class="zg-progress">
+                                            <span class="zg-meter"><span class="zg-meter-fill" style="width: <?= (int) $meta['progress'] ?>%"></span></span>
+                                            <em><?= (int) $meta['progress'] ?>%</em>
+                                        </span>
+                                        <?php if (! $isUnfiled && $can_manage_lists): ?>
+                                            <span class="zg-groupactions">
+                                                <?= $this->modal->medium('edit', t('Edit'), 'TaskGroupController', 'edit', array('plugin' => 'TaskManager', 'project_id' => $project['id'], 'task_list_id' => $meta['task_list_id'])) ?>
+                                                <?= $this->modal->confirm('trash-o', t('Remove'), 'TaskGroupController', 'confirm', array('plugin' => 'TaskManager', 'project_id' => $project['id'], 'task_list_id' => $meta['task_list_id'])) ?>
+                                            </span>
+                                        <?php endif ?>
+                                    </span>
+                                </span>
+                            </td>
+                        </tr>
+
+                        <?php if (empty($groupRows)): ?>
+                            <tr class="<?= $rowClass ?> zg-groupempty">
+                                <td colspan="10">
+                                    <?= $isUnfiled
+                                        ? t('No tasks outside a list.')
+                                        : t('No tasks in this list yet. Open a task and choose this list in its Task list field.') ?>
+                                </td>
+                            </tr>
+                        <?php endif ?>
                     <?php endif ?>
 
                     <?php foreach ($groupRows as $row): ?>
-                        <tr class="<?= $row['is_overdue'] ? 'is-overdue' : '' ?> <?= $row['is_active'] ? '' : 'is-closed' ?>">
+                        <tr class="<?= $rowClass ?> <?= $row['is_overdue'] ? 'is-overdue' : '' ?> <?= $row['is_active'] ? '' : 'is-closed' ?>">
                             <td class="zg-col-code">
                                 <?php if (! empty($row['subtasks'])): ?>
                                     <?php /* The id doubles as the disclosure control: click it to
@@ -172,11 +228,15 @@ $sortLink = function ($column, $label) use ($base, $order, $direction) {
                             <td class="zg-col-date <?= $row['is_overdue'] ? 'is-late' : '' ?>"><?= $row['date_due'] > 0 ? $this->dt->date($row['date_due']) : '<span class="zg-muted">&mdash;</span>' ?></td>
                             <td class="zg-col-duration"><?= $row['duration'] > 0 ? t('%d days', $row['duration']) : '<span class="zg-muted">&mdash;</span>' ?></td>
                             <td class="zg-col-priority">
-                                <?php if ($row['priority'] > 0): ?>
-                                    <span class="zg-priority <?= $this->taskTree->getPriorityClass($row['priority']) ?>"><?= $this->taskTree->getPriorityLabel($row['priority']) ?></span>
-                                <?php else: ?>
-                                    <span class="zg-muted">&mdash;</span>
-                                <?php endif ?>
+                                <?= $this->render('TaskManager:grid/status_select', array(
+                                    'options'        => $priority_options,
+                                    'option_classes' => $priority_classes,
+                                    'current'        => $row['priority'],
+                                    'current_label'  => $row['priority'] > 0 ? 'P'.$row['priority'] : t('None'),
+                                    'current_class'  => 'zs-prio '.$this->taskTree->getPriorityClass($row['priority']),
+                                    'editable'       => $can_prioritise,
+                                    'url_template'   => $this->url->href('StatusChangeController', 'priority', array('plugin' => 'TaskManager', 'project_id' => $project['id'], 'task_id' => $row['id'])).'&priority=%s&csrf_token=%s',
+                                )) ?>
                             </td>
                             <td class="zg-col-progress">
                                 <span class="zg-progress">
@@ -190,7 +250,7 @@ $sortLink = function ($column, $label) use ($base, $order, $direction) {
                                  line with the task above. Hidden until the id is
                                  clicked. */ ?>
                         <?php foreach ($row['subtasks'] as $subIndex => $sub): ?>
-                            <tr class="zg-subrow" data-zg-subtree-of="<?= (int) $row['id'] ?>" hidden>
+                            <tr class="zg-subrow <?= $rowClass ?>" data-zg-subtree-of="<?= (int) $row['id'] ?>" hidden>
                                 <td class="zg-col-code">
                                     <span class="zg-subbranch <?= $subIndex === count($row['subtasks']) - 1 ? 'is-last' : '' ?>" aria-hidden="true"></span>
                                 </td>

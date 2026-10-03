@@ -2,10 +2,13 @@
 /* Replaces app/Template/project_header/views.php via setTemplateOverride.
    Project Tabs:
    1. Tasks (Default Landing)
-   2. Task Lists
-   3. Reports (Deliverables verification)
-   4. Calendar & Gantt (via hooks)
-   5. Overflow: Board, Task Tree, Analytics, Workflow Rules.
+   2. Reports (Deliverables verification)
+   3. Calendar & Gantt (via hooks)
+   4. Overflow: Board, Task Tree, Analytics, Workflow Rules.
+
+   Task Lists was a tab of its own until PMO-018. It is now a grouping of the
+   Tasks tab - same headers, but with the task columns beside them - so the
+   two views no longer disagree about what a project contains.
 */
 $pid    = $project['id'];
 $search = isset($filters['search']) ? $filters['search'] : '';
@@ -17,12 +20,6 @@ $search = isset($filters['search']) ? $filters['search'] : '';
     <li class="<?= $this->app->checkMenuSelection('TaskGridController') || $this->app->checkMenuSelection('ProjectOverviewController') ? 'active' : '' ?>">
         <a href="<?= $this->url->href('TaskGridController', 'show', array('plugin' => 'TaskManager', 'project_id' => $pid)) ?>">
             <i class="fa fa-fw fa-check-square-o" aria-hidden="true"></i><?= t('Tasks') ?>
-        </a>
-    </li>
-
-    <li class="<?= $this->app->checkMenuSelection('TaskGroupController') ? 'active' : '' ?>">
-        <a href="<?= $this->url->href('TaskGroupController', 'index', array('plugin' => 'TaskManager', 'project_id' => $pid)) ?>">
-            <i class="fa fa-fw fa-list-ul" aria-hidden="true"></i><?= t('Task Lists') ?>
         </a>
     </li>
 
@@ -54,7 +51,7 @@ $search = isset($filters['search']) ? $filters['search'] : '';
     </li>
 
     <?php /* Pushed to the right-hand end of the strip. Only on the task
-             grid: this header is shared with Gantt, Calendar, Task Lists and
+             grid: this header is shared with Gantt, Calendar and
              Reports, where the display picker points at a table that is not
              there and the Filter button has no panel to open. */ ?>
     <?php if ($this->gridHeader->isTaskGrid()): ?>

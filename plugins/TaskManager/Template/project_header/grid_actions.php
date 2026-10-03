@@ -6,7 +6,7 @@
  * They used to sit in a toolbar of their own under the tabs, which spent a
  * whole row on two controls and left the tab strip half empty. They are
  * rendered only on the task grid: the tab strip is shared with Gantt,
- * Calendar, Task Lists and Reports, and on those pages the picker points at
+ * Calendar and Reports, and on those pages the picker points at
  * a table that is not there and the Filter button has no panel to open.
  *
  * @var array $project
@@ -18,6 +18,10 @@ $modes   = $this->gridHeader->getModes();
 $view    = $this->gridHeader->getView();
 $groupBy = $this->gridHeader->getGroupBy();
 $search  = isset($filters['search']) ? $filters['search'] : '';
+
+/* Group By lives inside the display dropdown rather than beside it. The bar
+   was deliberately kept to two controls; a third would undo that. */
+$groupings = $this->gridHeader->getGroupings();
 ?>
 <li class="zg-tabs-actions">
     <div class="dropdown zg-modepick">
@@ -47,8 +51,42 @@ $search  = isset($filters['search']) ? $filters['search'] : '';
                         ) ?>
                 </li>
             <?php endforeach ?>
+
+            <?php /* Only the list has rows to group; the board groups by
+                     column and the Gantt by date, both by definition. */ ?>
+            <?php if ($mode === 'list'): ?>
+                <li class="zg-modepick-sep"><span><?= t('Group by') ?></span></li>
+                <?php foreach ($groupings as $key => $label): ?>
+                    <li>
+                        <?= $this->url->link(
+                                '<i class="fa fa-fw fa-'.($key === $groupBy ? 'check' : 'none').'"></i> '.$label,
+                                'TaskGridController',
+                                'show',
+                                array(
+                                    'plugin'     => 'TaskManager',
+                                    'project_id' => $project['id'],
+                                    'mode'       => $mode,
+                                    'view'       => $view,
+                                    'group_by'   => $key,
+                                ),
+                                false,
+                                $key === $groupBy ? 'is-current' : ''
+                            ) ?>
+                    </li>
+                <?php endforeach ?>
+            <?php endif ?>
         </ul>
     </div>
+
+    <?php /* Creating a list used to be a button on the Task Lists page. That
+             page is gone, so the action moved here, next to the grouping it
+             affects. Shown only while the list is actually grouped by list -
+             elsewhere it would create something the screen does not show. */ ?>
+    <?php if ($mode === 'list' && $groupBy === 'task_list' && $this->user->hasProjectAccess('TaskGroupController', 'create', $project['id'])): ?>
+        <span class="zg-newlist">
+            <?= $this->modal->medium('plus', t('New Task List'), 'TaskGroupController', 'create', array('plugin' => 'TaskManager', 'project_id' => $project['id'])) ?>
+        </span>
+    <?php endif ?>
 
     <a href="#" class="zf-open zg-filter-trigger" data-zf-open title="<?= t('Filter') ?>">
         <i class="fa fa-filter" aria-hidden="true"></i>
