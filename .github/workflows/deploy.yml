@@ -89,7 +89,7 @@ jobs:
               # .htaccess rule is ever lost.
               $SUDO chmod -R 700 "$APP/.git"                                            || stage "warn: chmod .git"
 
-                            # The old line guessed the service name from the CLI PHP version
+              # The old line guessed the service name from the CLI PHP version
               # - "php8.5-fpm", because `php` on PATH is 8.5. The CLI and FPM
               # are separate installations and on this host they disagree, so
               # that restart failed on every deploy for weeks behind a line
@@ -97,18 +97,16 @@ jobs:
               # actually running, raises the limits at the level that wins,
               # validates before touching anything, and restores what it found
               # if either step fails.
+              # Every if/else below is on ONE line on purpose. script_stop kills the
+              # script at any line boundary where $? is non-zero, and an "else" on its
+              # own line is entered with $? = 1 from the test that just failed. That is
+              # what killed run #19.
               stage "php limits + restart php-fpm"
-              if [ -f "$APP/ops/set-php-limits.sh" ]; then
-                # sh, not ./ - the permissions pass above makes every file 640.
-                if $SUDO sh "$APP/ops/set-php-limits.sh"; then
-                  stage "php limits applied, php-fpm restarted"
-                else
-                  rc=$?
-                  stage "warn: set-php-limits.sh exited $rc (it rolls itself back; see the job log)"
-                fi
-              else
-                stage "warn: ops/set-php-limits.sh missing - php-fpm not restarted"
-              fi
+              PHPLIM="$APP/ops/set-php-limits.sh"
+              RC=0
+              # sh, not ./ - the permissions pass above makes every file 640.
+              if [ -f "$PHPLIM" ]; then $SUDO sh "$PHPLIM" || RC=$?; else RC=127; fi
+              if [ "$RC" -eq 0 ]; then stage "php limits applied, php-fpm restarted"; elif [ "$RC" -eq 127 ]; then stage "warn: ops/set-php-limits.sh missing - php-fpm not restarted"; else stage "warn: set-php-limits.sh exited $RC (it rolls itself back; see the job log)"; fi
 
               $SUDO systemctl reload apache2 || stage "warn: apache reload"
             else
