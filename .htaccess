@@ -17,7 +17,14 @@
 # Dumps, logs, databases, editor leftovers, and any copy of config.php that
 # does not end in .php - that suffix is what stops it being executed and makes
 # it readable as plain text.
-<FilesMatch "(^\.|\.(sql|sqlite|sqlite-wal|sqlite-shm|db|log|bak|old|orig|swp|env|ini|dist|yml|yaml|lock|md|sh)$|^config\.php\.)">
+#
+# deploy-status.txt is named explicitly rather than denying every .txt: it was
+# put in the web root on purpose, so a failed deploy could be diagnosed
+# without signing in to GitHub, and that is exactly how the php-fpm restart
+# failure was found. The trade is that it also tells anyone who asks which
+# PHP version runs here and which commit is deployed. Denying the one file
+# keeps robots.txt and anything else of the sort working.
+<FilesMatch "(^\.|^deploy-status\.txt$|\.(sql|sqlite|sqlite-wal|sqlite-shm|db|log|bak|old|orig|swp|env|ini|dist|yml|yaml|lock|md|sh)$|^config\.php\.)">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>
