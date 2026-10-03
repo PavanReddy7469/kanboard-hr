@@ -134,15 +134,19 @@ class StatusChangeController extends BaseController
             $rank = 0;
         }
 
-        $assigned = $this->priorityModel->moveToRank($projectId, $task['id'], $rank);
+        $move     = $this->priorityModel->moveToRank($projectId, $task['id'], $rank);
+        $assigned = $move['rank'];
 
         $this->response->json(array(
             'ok'     => true,
             'label'  => $assigned > 0 ? 'P'.$assigned : t('None'),
             'class'  => 'zs-prio '.$this->helper->taskTree->getPriorityClass($assigned),
-            /* Only when something actually moved. Repeating the same choice
-               writes nothing and should not bounce the page. */
-            'reload' => $assigned !== (int) $task['priority'],
+            /* Whether any row moved, not whether THIS one did. Choosing the
+               position a task already holds leaves its own number alone and
+               still breaks every tie behind it, and the column on screen
+               would then be wrong while the pill looked settled. A genuinely
+               settled queue writes nothing and does not reload. */
+            'reload' => $move['changed'] > 0,
         ));
     }
 

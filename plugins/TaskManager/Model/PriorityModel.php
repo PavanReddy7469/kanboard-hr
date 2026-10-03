@@ -100,7 +100,11 @@ class PriorityModel extends Base
      * @param  integer $projectId
      * @param  integer $taskId
      * @param  integer $rank   the position asked for; clamped to the queue
-     * @return integer  the position actually given
+     * @return array    rank: the position actually given, changed: how many
+     *                  rows moved - which is not the same question. Picking
+     *                  the position a task already holds leaves its own
+     *                  number alone while still breaking every tie behind
+     *                  it, so the caller cannot infer one from the other.
      */
     public function moveToRank($projectId, $taskId, $rank)
     {
@@ -126,9 +130,11 @@ class PriorityModel extends Base
         }
 
         $this->db->startTransaction();
+        $changed = 0;
 
         foreach ($assignments as $id => $priority) {
             if (! isset($current[$id]) || $current[$id] !== $priority) {
+                $changed++;
                 /* Direct update, not taskModificationModel: a renumber of
                    fifteen bystanders should not put fifteen notifications
                    through the queue. Same reasoning as closeGaps(). */
@@ -144,7 +150,10 @@ class PriorityModel extends Base
            ever grows. */
         $this->widenScale($projectId, $start + max(0, count($assignments) - 1));
 
-        return isset($assignments[$taskId]) ? $assignments[$taskId] : 0;
+        return array(
+            'rank'    => isset($assignments[$taskId]) ? $assignments[$taskId] : 0,
+            'changed' => $changed,
+        );
     }
 
     /**
