@@ -216,6 +216,43 @@ restore() {
     fi
 }
 
+# 0. Is there anything to do at all? This runs on every deploy, and under
+#    mod_php applying it means restarting Apache - a second where the site
+#    does not answer. Doing that on every push, to write a file that is
+#    already byte-for-byte correct, would be a self-inflicted outage on a
+#    schedule. So: if the drop-in already says what it should and no pool
+#    pins a smaller number, say so and stop without touching the service.
+[ -d "$CONF_D" ] || die "no conf.d directory at $CONF_D; nothing changed"
+
+WANTED=$(cat <<EOF
+; Managed by ops/set-php-limits.sh in the kanboard-hr repository.
+; Edit there, not here - a deploy rewrites this file.
+upload_max_filesize = $UPLOAD_MAX
+post_max_size = $POST_MAX
+memory_limit = $MEMORY
+max_execution_time = $EXEC_TIME
+max_input_time = $EXEC_TIME
+max_file_uploads = 20
+EOF
+)
+
+# A pool that pins these is only "work to do" if what it pins is not already
+# the number we want - otherwise every deploy would rewrite and restart.
+NEEDS_POOL_WORK=0
+if [ "$MODE" = "fpm" ]; then
+    if grep -rhE 'php_admin_value\[(upload_max_filesize|post_max_size|memory_limit)\]' "$POOL_DIR" 2>/dev/null \
+       | grep -qvE "=[[:space:]]*($UPLOAD_MAX|$POST_MAX|$MEMORY)[[:space:]]*$"; then
+        NEEDS_POOL_WORK=1
+    fi
+fi
+
+if [ -f "$CONF_D/$INI_NAME" ] && [ "$NEEDS_POOL_WORK" = "0" ] \
+   && [ "$WANTED" = "$(cat "$CONF_D/$INI_NAME")" ]; then
+    say "already correct; nothing to change, service left running"
+    report_current
+    exit 0
+fi
+
 # 1. The ini drop-in. Under mod_php this is the whole fix; under FPM it is
 #    correct whenever nothing pins the value, and harmless when something
 #    does - it simply loses to the pool, which step 2 then raises.
