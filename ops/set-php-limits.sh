@@ -56,7 +56,39 @@ if [ -z "$SERVICE" ]; then
               | awk '{print $1}' | grep -m1 -E '^php[0-9.]*-fpm\.service$')
 fi
 
-[ -n "$SERVICE" ] || die "no php*-fpm service found; is PHP-FPM in use on this host?"
+# Vendor builds do not use the Debian name. Plesk ships plesk-php84-fpm,
+# cPanel ships ea-php83-php-fpm, Remi ships php83-php-fpm. Widen the net
+# before giving up, matching anything that is both php and fpm.
+if [ -z "$SERVICE" ]; then
+    SERVICE=$(systemctl list-units --type=service --all --no-legend --plain 2>/dev/null \
+              | awk '{print $1}' | grep -m1 -iE '^[a-z0-9.-]*php[a-z0-9.-]*fpm\.service$')
+fi
+
+if [ -z "$SERVICE" ]; then
+    # Say what IS here rather than only what is not. These three answers
+    # between them identify the layout: which php services exist, where the
+    # config lives, and - the one that matters - whether Apache is serving
+    # PHP through FPM at all or through a module, because .user.ini is only
+    # read by the CGI/FastCGI SAPIs and was ignored here.
+    echo "set-php-limits: no php*fpm service. Reporting what this host has instead:"
+    echo "--- php-ish units ---"
+    systemctl list-units --type=service --all --no-legend --plain 2>/dev/null \
+        | grep -i php | sed 's/^/    /' || echo "    (none)"
+    echo "--- php config trees ---"
+    ls -d /etc/php /etc/php.d /etc/php-fpm.d /etc/php[0-9]* /opt/plesk/php/*/etc \
+          /opt/cpanel/ea-php*/root/etc /etc/opt/remi/php* 2>/dev/null | sed 's/^/    /' \
+        || echo "    (none of the usual places)"
+    echo "--- how apache runs php ---"
+    (apachectl -M 2>/dev/null || httpd -M 2>/dev/null || apache2ctl -M 2>/dev/null) \
+        | grep -iE 'php|proxy_fcgi|fcgid|suexec|lsapi' | sed 's/^/    /' || echo "    (apache module list unavailable)"
+    echo "--- other web servers ---"
+    for u in litespeed lsws nginx apache2 httpd; do
+        systemctl is-active "$u" >/dev/null 2>&1 && echo "    $u: active"
+    done
+    echo "--- php binaries ---"
+    ls /usr/sbin/php-fpm* /usr/sbin/*fpm* /usr/local/sbin/*fpm* 2>/dev/null | sed 's/^/    /' || echo "    (no fpm binary on the usual paths)"
+    die "no php*-fpm service found; see the layout printed above"
+fi
 
 # php8.3-fpm.service -> 8.3 ; php-fpm.service -> (empty, unversioned layout)
 VERSION=$(echo "$SERVICE" | sed -n 's/^php\([0-9.]*\)-fpm\.service$/\1/p')
