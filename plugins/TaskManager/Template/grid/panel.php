@@ -132,13 +132,18 @@ $row = function ($label, $value, $hint = '') {
                      NOT NULL with a cascading foreign key, and the Kanban board
                      is rendered from it. It is simply not shown. */ ?>
             <dt><?= t('Owner') ?></dt>
-            <dd>
-                <?php if (! empty($task['assignee_username'])): ?>
-                    <span class="zp-chip"><?= $this->text->e($this->user->formatName($task['owner_id'], $task['assignee_name'] ?: $task['assignee_username'])) ?></span>
-                <?php else: ?>
-                    <span class="zp-muted"><?= t('Unassigned') ?></span>
-                <?php endif ?>
-            </dd>
+            <dd><?= $this->render('TaskManager:grid/status_select', array(
+                    'variant'        => 'owner',
+                    'options'        => $assignable_users,
+                    'option_classes' => array(),
+                    'current'        => $task['owner_id'],
+                    'current_label'  => ! empty($task['assignee_username'])
+                        ? $this->user->formatName($task['owner_id'], $task['assignee_name'] ?: $task['assignee_username'])
+                        : t('Unassigned'),
+                    'current_class'  => $task['owner_id'] > 0 ? 'zs-owner' : 'zs-owner is-unassigned',
+                    'editable'       => $can_assign,
+                    'url_template'   => $this->url->href('StatusChangeController', 'owner', array('plugin' => 'TaskManager', 'project_id' => $pid, 'task_id' => $tid)).'&owner_id=%s&csrf_token=%s',
+                )) ?></dd>
 
             <dt><?= t('Status') ?></dt>
             <dd><?= $this->render('TaskManager:grid/status_select', array(
@@ -161,13 +166,15 @@ $row = function ($label, $value, $hint = '') {
             <dd><?= $duration > 0 ? t('%d days', $duration) : '<span class="zp-muted">&mdash;</span>' ?></dd>
 
             <dt><?= t('Priority') ?></dt>
-            <dd>
-                <?php if ($task['priority'] > 0): ?>
-                    <span class="zp-priority <?= $this->taskTree->getPriorityClass($task['priority']) ?>"><?= $this->taskTree->getPriorityLabel($task['priority']) ?></span>
-                <?php else: ?>
-                    <span class="zp-muted">&mdash;</span>
-                <?php endif ?>
-            </dd>
+            <dd><?= $this->render('TaskManager:grid/status_select', array(
+                    'options'        => $priority_options,
+                    'option_classes' => $priority_classes,
+                    'current'        => $task['priority'],
+                    'current_label'  => $task['priority'] > 0 ? 'P'.$task['priority'] : t('None'),
+                    'current_class'  => 'zs-prio '.$this->taskTree->getPriorityClass($task['priority']),
+                    'editable'       => $can_prioritise,
+                    'url_template'   => $this->url->href('StatusChangeController', 'priority', array('plugin' => 'TaskManager', 'project_id' => $pid, 'task_id' => $tid)).'&priority=%s&csrf_token=%s',
+                )) ?></dd>
 
             <dt><?= t('Completion Percentage') ?></dt>
             <dd>

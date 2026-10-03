@@ -75,6 +75,19 @@ class TaskPanelController extends BaseController
             'entries'      => $this->getTimeEntries($task['id']),
             'transitions'  => $this->transitionModel->getAllByTask($task['id']),
             'can_edit'     => $this->helper->user->hasProjectAccess('TaskModificationController', 'edit', $task['project_id']),
+
+            /* Owner and Priority are pickers here too, not just in the grid.
+               Reading a task and changing one of its fields are the same
+               moment; sending someone to the Edit modal to move a task from
+               P5 to P1 was a dialog for a single click. Same widget, same
+               endpoints, same permission checks as the grid. */
+            'assignable_users' => array(0 => t('Unassigned'))
+                + $this->projectUserRoleModel->getAssignableUsersList($task['project_id'], false),
+            'can_assign'       => $this->helper->user->hasProjectAccess('TaskModificationController', 'update', $task['project_id'])
+                && $this->helper->projectRole->canChangeAssignee($task),
+            'priority_options' => $this->getPriorityOptions($project),
+            'priority_classes' => $this->getPriorityClasses($project),
+            'can_prioritise'   => $this->helper->user->hasProjectAccess('TaskModificationController', 'update', $task['project_id']),
         )));
     }
 
@@ -84,6 +97,55 @@ class TaskPanelController extends BaseController
      * @param  array $task
      * @return integer
      */
+    /**
+     * The priority numbers this project uses. Kanboard lets each project set
+     * its own range, so these are read from the project rather than assumed.
+     *
+     * @param  array $project
+     * @return array
+     */
+    protected function getPriorityOptions(array $project)
+    {
+        $options = array();
+
+        foreach ($this->priorityRange($project) as $p) {
+            $options[$p] = $p > 0 ? 'P'.$p : t('None');
+        }
+
+        return $options;
+    }
+
+    /**
+     * @param  array $project
+     * @return array
+     */
+    protected function getPriorityClasses(array $project)
+    {
+        $classes = array();
+
+        foreach ($this->priorityRange($project) as $p) {
+            $classes[$p] = $this->helper->taskTree->getPriorityClass($p);
+        }
+
+        return $classes;
+    }
+
+    /**
+     * @param  array $project
+     * @return array
+     */
+    protected function priorityRange(array $project)
+    {
+        $start = (int) $project['priority_start'];
+        $end   = (int) $project['priority_end'];
+
+        if ($start > $end) {
+            list($start, $end) = array($end, $start);
+        }
+
+        return range($start, $end);
+    }
+
     protected function getDuration(array $task)
     {
         $start = (int) $task['date_started'];
