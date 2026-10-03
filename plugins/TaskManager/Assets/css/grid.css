@@ -404,35 +404,12 @@
 
 .zg-groupactions { display: inline-flex; gap: 10px; }
 
-/* The toolbar's action buttons - Add Task, New Task List - beside the
-   display picker and Filter. They were plain links, which read as text next
-   to two controls that are clearly buttons; this is the same shape as
-   .zg-filter-trigger so the whole strip is one row of controls.
-
-   The rule targets the <a> the modal helper emits rather than the span,
-   because that <a> is what you click. */
-.zg-toolbtn > a {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    background: #ffffff;
-    border: 1.5px solid #cbd5e1;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 0.875rem;
-    color: #1e293b;
-    text-decoration: none;
-    white-space: nowrap;
-    cursor: pointer;
-}
-
-.zg-toolbtn > a:hover {
-    border-color: var(--sb-navy);
-    color: var(--sb-navy);
-}
-
-.zg-toolbtn > a .fa { color: #6366f1; }
+/* The toolbar's action buttons - Add Task, New Task List - are styled with
+   the display picker and Filter further down, in the .zg-tabs-actions rules.
+   Defining them here instead did not work: the tab strip carries
+   "html body ul.views li a", and a selector of one class beats five
+   elements only if it has two classes of its own. Sharing the rule also
+   keeps the four controls identical rather than merely similar. */
 
 /* The "Group by" caption inside the display dropdown. */
 .zg-modepick-sep {
@@ -1851,7 +1828,8 @@ body.zf-open { overflow: hidden; }
 }
 
 .zg-tabs-actions .zg-modepick,
-.zg-tabs-actions .zg-filter-trigger {
+.zg-tabs-actions .zg-filter-trigger,
+.zg-tabs-actions .zg-toolbtn {
     flex: 0 0 auto;
 }
 
@@ -1859,7 +1837,8 @@ body.zf-open { overflow: hidden; }
    in the old toolbar - the picker took its height from a token and the
    filter button from its padding. */
 .zg-tabs-actions .zg-modepick > a.dropdown-menu,
-.zg-tabs-actions .zg-filter-trigger {
+.zg-tabs-actions .zg-filter-trigger,
+.zg-tabs-actions .zg-toolbtn > a {
     height: var(--sb-control-h);
     padding: 0 12px;
     border: 1px solid var(--sb-200);
@@ -1870,18 +1849,25 @@ body.zf-open { overflow: hidden; }
     line-height: 1;
 }
 
-.zg-tabs-actions .zg-filter-trigger {
+.zg-tabs-actions .zg-filter-trigger,
+.zg-tabs-actions .zg-toolbtn > a {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     color: var(--sb-700);
+    white-space: nowrap;
+    text-decoration: none;
 }
 
 .zg-tabs-actions .zg-filter-trigger:hover,
-.zg-tabs-actions .zg-modepick > a.dropdown-menu:hover {
+.zg-tabs-actions .zg-modepick > a.dropdown-menu:hover,
+.zg-tabs-actions .zg-toolbtn > a:hover {
     border-color: var(--sb-300);
     color: var(--sb-navy);
 }
+
+/* The icon picks up the accent the Filter funnel already uses. */
+.zg-tabs-actions .zg-toolbtn > a .fa { color: #6366f1; }
 
 .zg-modepick-caret {
     color: var(--sb-400);
