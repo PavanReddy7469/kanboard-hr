@@ -1,32 +1,40 @@
 #!/bin/sh
 #
-# Raise PHP's upload limits for this application, on the web server's PHP.
+# Raise PHP's upload limits for this application, on the PHP that actually
+# serves the site.
 #
-#   sudo ops/set-php-limits.sh            apply, then restart PHP-FPM
+#   sudo ops/set-php-limits.sh            apply, then restart the web PHP
 #   sudo ops/set-php-limits.sh --check    report only, change nothing
 #
 # Why this exists rather than a .user.ini: a .user.ini was shipped in the web
-# root and the server went on reporting a 2MB ceiling. .user.ini cannot
-# override a php_admin_value set in the FPM pool - that is the mechanism a
-# host uses to impose a limit tenants are not allowed to raise - so the limit
-# has to be set at the same level or higher.
+# root and the server went on reporting a 2MB ceiling. .user.ini is read only
+# by the CGI and FastCGI SAPIs. This host serves PHP through mod_php - the
+# module loaded into Apache - which never reads the file at all. So the limit
+# has to be set where that PHP does read it.
+#
+# Two layouts are handled, decided by what is actually running:
+#
+#   mod_php   the settings go in /etc/php/<ver>/apache2/conf.d, which is read
+#             when Apache starts, so Apache is restarted (a reload does not
+#             re-read php.ini).
+#   php-fpm   the settings go in the FPM conf.d, and any php_admin_value in a
+#             pool that pins a smaller number is raised too, because that
+#             beats both the drop-in and .user.ini.
 #
 # Everything here is idempotent and guarded:
 #
-#   * the FPM service name is discovered, never guessed from the CLI PHP
-#     version. The two are separate installations and on this server they
-#     disagree, which is why "systemctl restart php8.5-fpm" has been failing
-#     on every deploy.
+#   * the service is discovered, never guessed from the CLI PHP version. The
+#     CLI and the web SAPI are separate installations and on this server they
+#     disagree, which is why "systemctl restart php8.5-fpm" failed on every
+#     deploy for weeks.
 #   * every file it edits is backed up first.
-#   * the result is validated with `php-fpm -t` BEFORE anything is restarted.
-#     A config PHP-FPM cannot parse would stop the service and take the whole
-#     site down, not just uploads.
+#   * the configuration is validated BEFORE anything is restarted.
 #   * if validation or the restart fails, the backups go back and the service
 #     is restarted again, so a bad run leaves the server as it found it.
 #
 # Exit codes: 0 applied or already correct, 1 could not apply (unchanged),
 # 2 applied but the restart failed and the rollback also failed - the only
-# case that needs a human.
+# case that needs a person.
 
 set -u
 
@@ -34,6 +42,8 @@ UPLOAD_MAX="100M"
 POST_MAX="110M"
 MEMORY="256M"
 EXEC_TIME="300"
+
+INI_NAME="99-superbee-uploads.ini"
 
 CHECK_ONLY=0
 [ "${1:-}" = "--check" ] && CHECK_ONLY=1
@@ -43,82 +53,137 @@ die() { echo "set-php-limits: ERROR: $1" >&2; exit 1; }
 
 [ "$(id -u)" = "0" ] || die "must run as root (sudo)"
 
-# ---------------------------------------------------------------- discover
+apache_ctl() {
+    if command -v apachectl >/dev/null 2>&1; then apachectl "$@"
+    elif command -v apache2ctl >/dev/null 2>&1; then apache2ctl "$@"
+    elif command -v httpd >/dev/null 2>&1; then httpd "$@"
+    else return 127
+    fi
+}
 
-# The running FPM service. Its name is the only reliable statement of which
-# PHP actually serves the site; the `php` on $PATH is the CLI build and can be
-# an entirely different version with its own php.ini.
+report_layout() {
+    say "what this host has:"
+    echo "    --- php-ish units ---"
+    systemctl list-units --type=service --all --no-legend --plain 2>/dev/null \
+        | grep -i php | sed 's/^/    /' || echo "    (none)"
+    echo "    --- php config trees ---"
+    ls -d /etc/php /etc/php.d /etc/php-fpm.d /etc/php[0-9]* /opt/plesk/php/*/etc \
+          /opt/cpanel/ea-php*/root/etc /etc/opt/remi/php* 2>/dev/null | sed 's/^/    /'
+    echo "    --- how apache runs php ---"
+    apache_ctl -M 2>/dev/null | grep -iE 'php|proxy_fcgi|fcgid|lsapi' | sed 's/^/    /'
+}
+
+# ---------------------------------------------------------------- discover
+#
+# MODE is decided by what is running, in this order: an FPM service if there
+# is one, otherwise mod_php inside Apache. Nothing is assumed from the
+# filesystem alone - a /etc/php/8.3/fpm directory can sit on a host that
+# serves everything through the module.
+
+MODE=""
+SERVICE=""
+CONF_D=""
+POOL_DIR=""
+VALIDATE=""
+
 SERVICE=$(systemctl list-units --type=service --state=running --no-legend --plain 2>/dev/null \
-          | awk '{print $1}' | grep -m1 -E '^php[0-9.]*-fpm\.service$')
+          | awk '{print $1}' | grep -m1 -iE '^[a-z0-9.-]*php[a-z0-9.-]*fpm\.service$')
 
 if [ -z "$SERVICE" ]; then
     SERVICE=$(systemctl list-unit-files --type=service --no-legend --plain 2>/dev/null \
-              | awk '{print $1}' | grep -m1 -E '^php[0-9.]*-fpm\.service$')
-fi
-
-# Vendor builds do not use the Debian name. Plesk ships plesk-php84-fpm,
-# cPanel ships ea-php83-php-fpm, Remi ships php83-php-fpm. Widen the net
-# before giving up, matching anything that is both php and fpm.
-if [ -z "$SERVICE" ]; then
-    SERVICE=$(systemctl list-units --type=service --all --no-legend --plain 2>/dev/null \
               | awk '{print $1}' | grep -m1 -iE '^[a-z0-9.-]*php[a-z0-9.-]*fpm\.service$')
 fi
 
-if [ -z "$SERVICE" ]; then
-    # Say what IS here rather than only what is not. These three answers
-    # between them identify the layout: which php services exist, where the
-    # config lives, and - the one that matters - whether Apache is serving
-    # PHP through FPM at all or through a module, because .user.ini is only
-    # read by the CGI/FastCGI SAPIs and was ignored here.
-    echo "set-php-limits: no php*fpm service. Reporting what this host has instead:"
-    echo "--- php-ish units ---"
-    systemctl list-units --type=service --all --no-legend --plain 2>/dev/null \
-        | grep -i php | sed 's/^/    /' || echo "    (none)"
-    echo "--- php config trees ---"
-    ls -d /etc/php /etc/php.d /etc/php-fpm.d /etc/php[0-9]* /opt/plesk/php/*/etc \
-          /opt/cpanel/ea-php*/root/etc /etc/opt/remi/php* 2>/dev/null | sed 's/^/    /' \
-        || echo "    (none of the usual places)"
-    echo "--- how apache runs php ---"
-    (apachectl -M 2>/dev/null || httpd -M 2>/dev/null || apache2ctl -M 2>/dev/null) \
-        | grep -iE 'php|proxy_fcgi|fcgid|suexec|lsapi' | sed 's/^/    /' || echo "    (apache module list unavailable)"
-    echo "--- other web servers ---"
-    for u in litespeed lsws nginx apache2 httpd; do
-        systemctl is-active "$u" >/dev/null 2>&1 && echo "    $u: active"
-    done
-    echo "--- php binaries ---"
-    ls /usr/sbin/php-fpm* /usr/sbin/*fpm* /usr/local/sbin/*fpm* 2>/dev/null | sed 's/^/    /' || echo "    (no fpm binary on the usual paths)"
-    die "no php*-fpm service found; see the layout printed above"
-fi
+if [ -n "$SERVICE" ]; then
+    MODE="fpm"
 
-# php8.3-fpm.service -> 8.3 ; php-fpm.service -> (empty, unversioned layout)
-VERSION=$(echo "$SERVICE" | sed -n 's/^php\([0-9.]*\)-fpm\.service$/\1/p')
+    VERSION=$(echo "$SERVICE" | sed -n 's/^php\([0-9.]*\)-fpm\.service$/\1/p')
 
-if [ -n "$VERSION" ] && [ -d "/etc/php/$VERSION/fpm" ]; then
-    FPM_ETC="/etc/php/$VERSION/fpm"              # Debian / Ubuntu
-    FPM_BIN=$(command -v "php-fpm$VERSION" || true)
-elif [ -d /etc/php-fpm.d ]; then
-    FPM_ETC="/etc/php-fpm"                        # RHEL / Alma / Rocky
-    FPM_BIN=$(command -v php-fpm || true)
+    if [ -n "$VERSION" ] && [ -d "/etc/php/$VERSION/fpm" ]; then
+        FPM_ETC="/etc/php/$VERSION/fpm"              # Debian / Ubuntu
+        FPM_BIN=$(command -v "php-fpm$VERSION" || true)
+    elif [ -d /etc/php-fpm.d ]; then
+        FPM_ETC="/etc/php-fpm"                        # RHEL / Alma / Rocky
+        FPM_BIN=$(command -v php-fpm || true)
+    else
+        die "found $SERVICE but not its configuration directory; unsupported layout"
+    fi
+
+    [ -n "${FPM_BIN:-}" ] || FPM_BIN=$(command -v php-fpm || true)
+    [ -n "$FPM_BIN" ] || die "found $SERVICE but no php-fpm binary to validate with"
+
+    POOL_DIR="$FPM_ETC/pool.d"
+    [ -d "$POOL_DIR" ] || POOL_DIR="/etc/php-fpm.d"
+    CONF_D="$FPM_ETC/conf.d"
+    VALIDATE="$FPM_BIN -t"
+
+    say "mode          php-fpm"
+    say "service       $SERVICE"
+    say "config        $FPM_ETC"
 else
-    die "found $SERVICE but not its configuration directory; unsupported layout"
+    # No FPM. Is Apache serving PHP through the module?
+    if apache_ctl -M 2>/dev/null | grep -qi 'php[0-9_]*_module'; then
+        MODE="apache"
+    else
+        say "no php*fpm service, and apache does not report a php module."
+        report_layout
+        die "cannot tell how PHP is served on this host; nothing changed"
+    fi
+
+    # Which Apache service. Both names can exist; take the one that runs.
+    for u in apache2 httpd; do
+        if systemctl is-active "$u" >/dev/null 2>&1; then SERVICE="$u.service"; break; fi
+    done
+    [ -n "$SERVICE" ] || die "mod_php is loaded but neither apache2 nor httpd is active"
+
+    # The module's own config tree. Debian keeps one per PHP version; if more
+    # than one is installed take the highest, which is what a2enmod would
+    # have enabled last. sort -V so 8.10 sorts above 8.9.
+    APACHE_PHP_ETC=$(ls -d /etc/php/*/apache2 2>/dev/null | sort -V | tail -1)
+    if [ -n "$APACHE_PHP_ETC" ]; then
+        CONF_D="$APACHE_PHP_ETC/conf.d"                 # Debian / Ubuntu
+        [ -d "$CONF_D" ] || CONF_D="$APACHE_PHP_ETC"
+    elif [ -d /etc/php.d ]; then
+        APACHE_PHP_ETC="/etc/php.d"                      # RHEL / Alma / Rocky
+        CONF_D="/etc/php.d"
+    else
+        report_layout
+        die "mod_php is loaded but its config tree was not found"
+    fi
+
+    VALIDATE="apache_configtest"
+
+    say "mode          mod_php (apache module)"
+    say "service       $SERVICE"
+    say "config        $APACHE_PHP_ETC"
 fi
 
-[ -n "${FPM_BIN:-}" ] || FPM_BIN=$(command -v php-fpm || true)
-[ -n "$FPM_BIN" ] || die "found $SERVICE but no php-fpm binary to validate with"
+apache_configtest() { apache_ctl -t >/dev/null 2>&1; }
 
-POOL_DIR="$FPM_ETC/pool.d"
-[ -d "$POOL_DIR" ] || POOL_DIR="/etc/php-fpm.d"
-CONF_D="$FPM_ETC/conf.d"
+run_validate() {
+    if [ "$VALIDATE" = "apache_configtest" ]; then apache_configtest
+    else $VALIDATE >/dev/null 2>&1
+    fi
+}
 
-say "service       $SERVICE"
-say "config        $FPM_ETC"
-say "validator     $FPM_BIN"
+show_validate_output() {
+    if [ "$VALIDATE" = "apache_configtest" ]; then apache_ctl -t 2>&1 | sed 's/^/    /'
+    else $VALIDATE 2>&1 | sed 's/^/    /'
+    fi
+}
 
 report_current() {
     say "currently enforced:"
-    "$FPM_BIN" -tt 2>&1 | grep -iE 'upload_max_filesize|post_max_size' | sed 's/^/    /' || true
-    grep -rhoE 'php_(admin_)?value\[(upload_max_filesize|post_max_size|memory_limit)\][[:space:]]*=.*' \
-        "$POOL_DIR" 2>/dev/null | sed 's/^/    pool: /' || true
+    if [ "$MODE" = "fpm" ]; then
+        "$FPM_BIN" -tt 2>&1 | grep -iE 'upload_max_filesize|post_max_size' | sed 's/^/    /' || true
+        grep -rhoE 'php_(admin_)?value\[(upload_max_filesize|post_max_size|memory_limit)\][[:space:]]*=.*' \
+            "$POOL_DIR" 2>/dev/null | sed 's/^/    pool: /' || true
+    else
+        # No way to ask the module directly from a shell, so show what is on
+        # disk for it: the files Apache's PHP will read, newest setting last.
+        grep -rhsE '^[[:space:]]*(upload_max_filesize|post_max_size|memory_limit)[[:space:]]*=' \
+            "$APACHE_PHP_ETC" 2>/dev/null | sed 's/^/    /' || true
+    fi
 }
 
 if [ "$CHECK_ONLY" = "1" ]; then
@@ -147,20 +212,21 @@ restore() {
     # A file this script created did not exist before it ran, so putting the
     # server back means removing it rather than restoring anything.
     if [ "$INI_WAS_CREATED" = "1" ]; then
-        rm -f "$CONF_D/99-superbee-uploads.ini"
+        rm -f "$CONF_D/$INI_NAME"
     fi
 }
 
-# 1. The ordinary ini drop-in. Correct whenever nothing pins the value, and
-#    harmless when something does - it simply loses to the pool.
+# 1. The ini drop-in. Under mod_php this is the whole fix; under FPM it is
+#    correct whenever nothing pins the value, and harmless when something
+#    does - it simply loses to the pool, which step 2 then raises.
 if [ -d "$CONF_D" ]; then
-    if [ -f "$CONF_D/99-superbee-uploads.ini" ]; then
-        backup "$CONF_D/99-superbee-uploads.ini"
+    if [ -f "$CONF_D/$INI_NAME" ]; then
+        backup "$CONF_D/$INI_NAME"
     else
         INI_WAS_CREATED=1
     fi
 
-    cat > "$CONF_D/99-superbee-uploads.ini" <<EOF
+    cat > "$CONF_D/$INI_NAME" <<EOF
 ; Managed by ops/set-php-limits.sh in the kanboard-hr repository.
 ; Edit there, not here - a deploy rewrites this file.
 upload_max_filesize = $UPLOAD_MAX
@@ -170,31 +236,35 @@ max_execution_time = $EXEC_TIME
 max_input_time = $EXEC_TIME
 max_file_uploads = 20
 EOF
-    say "wrote $CONF_D/99-superbee-uploads.ini"
+    say "wrote $CONF_D/$INI_NAME"
+else
+    die "no conf.d directory at $CONF_D; nothing changed"
 fi
 
-# 2. Anything pinning a smaller value in a pool has to be raised where it
-#    sits: php_admin_value beats both the ini drop-in and .user.ini, which is
-#    the whole reason the 2MB survived everything tried so far.
-PINNED=$(grep -rlE 'php_admin_value\[(upload_max_filesize|post_max_size|memory_limit)\]' "$POOL_DIR" 2>/dev/null || true)
+# 2. FPM only: anything pinning a smaller value in a pool has to be raised
+#    where it sits, because php_admin_value beats both the drop-in and
+#    .user.ini.
+if [ "$MODE" = "fpm" ]; then
+    PINNED=$(grep -rlE 'php_admin_value\[(upload_max_filesize|post_max_size|memory_limit)\]' "$POOL_DIR" 2>/dev/null || true)
 
-for f in $PINNED; do
-    backup "$f"
-    sed -i \
-        -e "s|^[[:space:]]*php_admin_value\[upload_max_filesize\][[:space:]]*=.*|php_admin_value[upload_max_filesize] = $UPLOAD_MAX|" \
-        -e "s|^[[:space:]]*php_admin_value\[post_max_size\][[:space:]]*=.*|php_admin_value[post_max_size] = $POST_MAX|" \
-        -e "s|^[[:space:]]*php_admin_value\[memory_limit\][[:space:]]*=.*|php_admin_value[memory_limit] = $MEMORY|" \
-        "$f"
-    say "raised the pinned values in $f"
-done
+    for f in $PINNED; do
+        backup "$f"
+        sed -i \
+            -e "s|^[[:space:]]*php_admin_value\[upload_max_filesize\][[:space:]]*=.*|php_admin_value[upload_max_filesize] = $UPLOAD_MAX|" \
+            -e "s|^[[:space:]]*php_admin_value\[post_max_size\][[:space:]]*=.*|php_admin_value[post_max_size] = $POST_MAX|" \
+            -e "s|^[[:space:]]*php_admin_value\[memory_limit\][[:space:]]*=.*|php_admin_value[memory_limit] = $MEMORY|" \
+            "$f"
+        say "raised the pinned values in $f"
+    done
 
-[ -z "$PINNED" ] && say "no pool pins these; the ini drop-in is enough"
+    [ -z "$PINNED" ] && say "no pool pins these; the ini drop-in is enough"
+fi
 
 # --------------------------------------------------------------- validate
 
-if ! "$FPM_BIN" -t >/dev/null 2>&1; then
+if ! run_validate; then
     say "the resulting configuration does not parse - rolling back, nothing restarted"
-    "$FPM_BIN" -t 2>&1 | sed 's/^/    /'
+    show_validate_output
     restore
     exit 1
 fi
@@ -202,6 +272,10 @@ fi
 say "configuration validates"
 
 # ---------------------------------------------------------------- restart
+#
+# mod_php reads php.ini once, at startup. A reload re-reads Apache's own
+# config but not PHP's, so this has to be a restart for the new limit to
+# take effect at all.
 
 if systemctl restart "$SERVICE" 2>/dev/null; then
     say "restarted $SERVICE"
