@@ -78,12 +78,22 @@ $groupings = $this->gridHeader->getGroupings();
         </ul>
     </div>
 
+    <?php /* Add Task. The table has a "+ Add Task" row at the top of the
+             list, but that row only exists in list mode and only once you
+             have scrolled back up to it. Up here it is reachable from the
+             board and the Gantt too, and from anywhere in a long list. */ ?>
+    <?php if ($this->user->hasProjectAccess('TaskCreationController', 'show', $project['id'])): ?>
+        <span class="zg-toolbtn">
+            <?= $this->modal->large('plus', t('Add Task'), 'TaskCreationController', 'show', array('project_id' => $project['id'])) ?>
+        </span>
+    <?php endif ?>
+
     <?php /* Creating a list used to be a button on the Task Lists page. That
              page is gone, so the action moved here, next to the grouping it
              affects. Shown only while the list is actually grouped by list -
              elsewhere it would create something the screen does not show. */ ?>
     <?php if ($mode === 'list' && $groupBy === 'task_list' && $this->user->hasProjectAccess('TaskGroupController', 'create', $project['id'])): ?>
-        <span class="zg-newlist">
+        <span class="zg-toolbtn">
             <?= $this->modal->medium('plus', t('New Task List'), 'TaskGroupController', 'create', array('plugin' => 'TaskManager', 'project_id' => $project['id'])) ?>
         </span>
     <?php endif ?>
