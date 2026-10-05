@@ -4,7 +4,7 @@ namespace Kanboard\Plugin\TaskManager\Schema;
 
 use PDO;
 
-const VERSION = 11;
+const VERSION = 12;
 
 function version_1(PDO $pdo)
 {
@@ -255,4 +255,31 @@ function version_11(PDO $pdo)
        from; this column only records which one is the evidence. 0 means the
        submission is a link, which is every row that already exists. */
     $pdo->exec("ALTER TABLE taskmanager_deliverables ADD COLUMN file_id INT NOT NULL DEFAULT 0");
+}
+
+function version_12(PDO $pdo)
+{
+    /* Engineers could still reassign work.
+     *
+     * The role's restrictions are written when a project first creates the
+     * role, and seed() deliberately leaves an existing role alone - somebody
+     * may have adjusted it on purpose. So a rule added to the blueprint
+     * later never reached the projects that already had the role, and every
+     * project created before today has an Engineer without this one.
+     *
+     * UNIQUE(role_id, rule) means a project that somehow already has it is
+     * skipped rather than duplicated, and NOT EXISTS keeps that from being
+     * an error. Nothing is removed: a restriction taken off a project by
+     * hand stays off.
+     */
+    $pdo->exec("
+        INSERT INTO project_role_has_restrictions (project_id, role_id, rule)
+        SELECT r.project_id, r.role_id, 'task_change_assignee'
+        FROM project_has_roles r
+        WHERE r.role = 'Engineer'
+        AND NOT EXISTS (
+            SELECT 1 FROM project_role_has_restrictions x
+            WHERE x.role_id = r.role_id AND x.rule = 'task_change_assignee'
+        )
+    ");
 }

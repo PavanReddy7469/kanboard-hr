@@ -37,6 +37,13 @@ class StatusChangeController extends BaseController
             throw new AccessForbiddenException(t('Unknown column.'));
         }
 
+        /* Nobody reports progress on work that is not theirs. Management
+           may set any task's status; everyone else only their own, and an
+           unassigned task is nobody's. */
+        if (! $this->helper->authority->canSetStatus($task)) {
+            throw new AccessForbiddenException(t("Only the person this task is assigned to can change its status."));
+        }
+
         if (! $this->helper->projectRole->canMoveTask($projectId, $task['column_id'], $columnId)
             || ! $this->helper->projectRole->canChangeTaskStatusInColumn($projectId, $columnId)) {
             throw new AccessForbiddenException(t("You don't have the permission to move this task"));
@@ -75,9 +82,8 @@ class StatusChangeController extends BaseController
         $projectId = (int) $task['project_id'];
         $ownerId   = $this->request->getIntegerParam('owner_id');
 
-        if (! $this->helper->projectRole->canUpdateTask($task)
-            || ! $this->helper->projectRole->canChangeAssignee($task)) {
-            throw new AccessForbiddenException(t("You don't have the permission to change the assignee"));
+        if (! $this->helper->authority->canSetOwner($task)) {
+            throw new AccessForbiddenException(t("Only an administrator or a manager can reassign a task."));
         }
 
         $users = $this->projectUserRoleModel->getAssignableUsersList($projectId, false);
@@ -122,8 +128,11 @@ class StatusChangeController extends BaseController
         $projectId = (int) $task['project_id'];
         $rank      = $this->request->getIntegerParam('priority');
 
-        if (! $this->helper->projectRole->canUpdateTask($task)) {
-            throw new AccessForbiddenException(t("You don't have the permission to change this task"));
+        /* Management only, and that includes their own tasks: a priority is
+           a position in the project's queue, so one person moving themselves
+           up moves everyone else down. */
+        if (! $this->helper->authority->canSetPriority($task)) {
+            throw new AccessForbiddenException(t("Only an administrator or a manager can set a priority."));
         }
 
         /* 0 is "no priority": the task leaves the queue. Anything else is a
@@ -167,9 +176,8 @@ class StatusChangeController extends BaseController
             throw new AccessForbiddenException(t('That subtask does not belong to this task.'));
         }
 
-        if (! $this->helper->projectRole->canUpdateTask($task)
-            || ! $this->helper->projectRole->canChangeAssignee($task)) {
-            throw new AccessForbiddenException(t("You don't have the permission to change the assignee"));
+        if (! $this->helper->authority->canSetOwner($task)) {
+            throw new AccessForbiddenException(t("Only an administrator or a manager can reassign work."));
         }
 
         $users = $this->projectUserRoleModel->getAssignableUsersList((int) $task['project_id'], false);
@@ -233,8 +241,8 @@ class StatusChangeController extends BaseController
             throw new AccessForbiddenException(t('Unknown status.'));
         }
 
-        if (! $this->helper->projectRole->canUpdateTask($task)) {
-            throw new AccessForbiddenException(t("You don't have the permission to change this subtask"));
+        if (! $this->helper->authority->canSetSubtaskStatus($task, $subtask)) {
+            throw new AccessForbiddenException(t("Only the person this work is assigned to can change its status."));
         }
 
         $saved = $this->subtaskModel->update(array(

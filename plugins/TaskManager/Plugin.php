@@ -36,6 +36,14 @@ class Plugin extends Base
            variables. This reads them back off the request. */
         $this->helper->register('gridHeader', '\Kanboard\Plugin\TaskManager\Helper\GridHeaderHelper');
 
+        /* Who may reassign work, set a priority, or report progress on a
+           task. One answer in one place: three controllers used to decide
+           this for themselves and all three asked only about Kanboard's
+           built-in project-manager role, which nobody in this installation
+           holds - everyone is in the custom Manager, Team Lead or Engineer
+           role, and a custom role is stored under its own name. */
+        $this->helper->register('authority', '\Kanboard\Plugin\TaskManager\Helper\AuthorityHelper');
+
         /* Replaces core's 'user' helper so a person reads as "NAME (EMP ID)".
            UserModel::prepareList() builds every user dropdown through
            getFullname(), so overriding here reaches task owner, assignee,
@@ -154,7 +162,7 @@ class Plugin extends Base
                fires no event, so it is the only way to close the hole a
                delete leaves in the priority queue. PriorityModel holds that
                renumbering, shared with the automatic action. */
-            'Plugin\TaskManager\Model' => array('ProjectModel', 'UserModel', 'TaskModel', 'PriorityModel', 'TaskDuplicationModel', 'TaskStatusModel', 'TaskCreationModel', 'TaskModificationModel', 'SubtaskModel', 'MilestoneModel', 'TaskListModel', 'DependencyModel', 'TimesheetModel', 'TimeEntryModel', 'RoleSeedModel', 'DashboardModel', 'GridModel', 'DeliverableModel'),
+            'Plugin\TaskManager\Model' => array('ProjectModel', 'UserModel', 'TaskModel', 'PriorityModel', 'TaskDuplicationModel', 'TaskStatusModel', 'TaskCreationModel', 'TaskModificationModel', 'TaskPositionModel', 'SubtaskModel', 'MilestoneModel', 'TaskListModel', 'DependencyModel', 'TimesheetModel', 'TimeEntryModel', 'RoleSeedModel', 'DashboardModel', 'GridModel', 'DeliverableModel'),
         );
     }
 

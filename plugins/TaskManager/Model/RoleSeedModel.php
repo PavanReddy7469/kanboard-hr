@@ -39,7 +39,13 @@ class RoleSeedModel extends Base
             self::ROLE_ENGINEER => array(
                 ProjectRoleRestrictionModel::RULE_TASK_CREATION,
                 ProjectRoleRestrictionModel::RULE_TASK_SUPPRESSION,
+                /* May not touch a task that is not theirs - which is what
+                   makes a status somebody's own to report. */
                 ProjectRoleRestrictionModel::RULE_TASK_UPDATE_ASSIGNED,
+                /* ...nor hand work to somebody else, or take it off them.
+                   Enforced again in AuthorityHelper, because this rule only
+                   covers Kanboard's own screens and the pills are ours. */
+                ProjectRoleRestrictionModel::RULE_TASK_CHANGE_ASSIGNEE,
             ),
         );
     }
@@ -55,6 +61,8 @@ class RoleSeedModel extends Base
      */
     public function seed($projectId)
     {
+        $this->backfillMissingRestrictions($projectId);
+
         $existing = array();
 
         foreach ($this->db->table(ProjectRoleModel::TABLE)->eq('project_id', $projectId)->findAll() as $row) {
@@ -83,5 +91,54 @@ class RoleSeedModel extends Base
                 ));
             }
         }
+    }
+
+    /**
+     * Add rules the blueprint has gained since a project's roles were made.
+     *
+     * seed() skips a role that already exists, which is right - somebody may
+     * have adjusted it on purpose - but it means a rule added to the
+     * blueprint later never reaches the projects that already had the role.
+     * That is how every existing project ended up with an Engineer who could
+     * still reassign work.
+     *
+     * Only ever adds. A rule removed from a project by hand stays removed.
+     *
+     * @param  integer $projectId
+     * @return integer  how many rows were added
+     */
+    public function backfillMissingRestrictions($projectId)
+    {
+        $projectId = (int) $projectId;
+        $blueprint = self::getBlueprint();
+        $added     = 0;
+
+        foreach ($this->db->table(ProjectRoleModel::TABLE)->eq('project_id', $projectId)->findAll() as $row) {
+            if (! isset($blueprint[$row['role']]) || empty($blueprint[$row['role']])) {
+                continue;
+            }
+
+            $have = array();
+
+            foreach ($this->db->table(ProjectRoleRestrictionModel::TABLE)->eq('role_id', $row['role_id'])->findAll() as $restriction) {
+                $have[$restriction['rule']] = true;
+            }
+
+            foreach ($blueprint[$row['role']] as $rule) {
+                if (isset($have[$rule])) {
+                    continue;
+                }
+
+                $this->db->table(ProjectRoleRestrictionModel::TABLE)->insert(array(
+                    'project_id' => $projectId,
+                    'role_id'    => (int) $row['role_id'],
+                    'rule'       => $rule,
+                ));
+
+                $added++;
+            }
+        }
+
+        return $added;
     }
 }

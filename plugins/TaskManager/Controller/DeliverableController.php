@@ -210,13 +210,20 @@ class DeliverableController extends BaseController
            the submission simply records which file it was. */
         $values['file_id'] = $this->storeEvidenceFile($task);
 
-        $hasLink = $this->deliverableModel->normaliseUrl(isset($values['url']) ? $values['url'] : '') !== '';
-        $hasFile = $values['file_id'] > 0;
+        $hasLink    = $this->deliverableModel->normaliseUrl(isset($values['url']) ? $values['url'] : '') !== '';
+        $hasFile    = $values['file_id'] > 0;
+        $hasSummary = trim(isset($values['note']) ? $values['note'] : '') !== '';
+        $hasTitle   = trim(isset($values['title']) ? $values['title'] : '') !== '';
 
         if ($this->uploadFailure !== '') {
             $this->flash->failure($this->uploadFailure);
-        } elseif (! $hasLink && ! $hasFile) {
-            $this->flash->failure(t('Attach the document, or paste a link to it - a report needs one or the other.'));
+        } elseif (! $hasLink && ! $hasFile && ! $hasSummary) {
+            /* Said separately when a title is all there is, because "a report
+               needs one of these three" is confusing to read next to a field
+               you have just filled in. */
+            $this->flash->failure($hasTitle
+                ? t('A title on its own is not a report. Attach the document, paste a link to it, or write the summary.')
+                : t('Attach the document, paste a link to it, or write a summary - a report needs at least one of the three.'));
         } elseif ($this->deliverableModel->submit($taskId, $this->userSession->getId(), $values)) {
             // Automatically move task to 'Rev' (In Review) column if present
             $columns = $this->columnModel->getAll($project['id']);
@@ -348,10 +355,11 @@ class DeliverableController extends BaseController
      */
     protected function canApprove(array $project)
     {
-        if ($this->userSession->isAdmin()) {
-            return true;
-        }
-
-        return $this->helper->projectRole->getProjectUserRole($project['id']) === Role::PROJECT_MANAGER;
+        /* This used to ask only about Kanboard's built-in project-manager
+           role, which nobody in this installation holds: everyone is in the
+           custom Manager, Team Lead or Engineer role, and a custom role is
+           stored under its own name. A Manager could not approve the reports
+           that were being submitted to them for approval. */
+        return $this->helper->authority->canApproveReport($project['id']);
     }
 }

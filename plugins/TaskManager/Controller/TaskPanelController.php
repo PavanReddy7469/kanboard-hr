@@ -47,7 +47,8 @@ class TaskPanelController extends BaseController
         $this->response->html($this->template->render('TaskManager:grid/panel', array(
             'columns'        => $columns,
             'column_classes' => $columnClasses,
-            'can_move'       => $this->helper->user->hasProjectAccess('BoardAjaxController', 'save', $task['project_id']),
+            'can_move'       => $this->helper->user->hasProjectAccess('BoardAjaxController', 'save', $task['project_id'])
+                && $this->helper->authority->canSetStatus($task),
             'task'         => $task,
             'project'      => $project,
             'code'         => $this->gridModel->getTaskCode($task),
@@ -83,11 +84,10 @@ class TaskPanelController extends BaseController
                endpoints, same permission checks as the grid. */
             'assignable_users' => array(0 => t('Unassigned'))
                 + $this->projectUserRoleModel->getAssignableUsersList($task['project_id'], false),
-            'can_assign'       => $this->helper->user->hasProjectAccess('TaskModificationController', 'update', $task['project_id'])
-                && $this->helper->projectRole->canChangeAssignee($task),
+            'can_assign'       => $this->helper->authority->canSetOwner($task),
             'priority_options' => $this->getPriorityChoices($project, 0),
             'priority_classes' => $this->getPriorityChoices($project, 1),
-            'can_prioritise'   => $this->helper->user->hasProjectAccess('TaskModificationController', 'update', $task['project_id']),
+            'can_prioritise'   => $this->helper->authority->canSetPriority($task),
         )));
     }
 

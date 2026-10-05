@@ -81,12 +81,12 @@ class TaskGridController extends BaseController
             'can_create' => $this->helper->user->hasProjectAccess('TaskCreationController', 'show', $project['id']),
             'can_move'   => $this->helper->user->hasProjectAccess('BoardAjaxController', 'save', $project['id']),
 
-            /* Whether the Owner cell is a picker or just a name. A custom
-               project role can be barred from reassigning work, and the same
-               check runs again on the save - this only decides what the grid
-               offers. */
-            'can_assign' => $this->helper->user->hasProjectAccess('TaskModificationController', 'update', $project['id'])
-                && $this->helper->projectRole->canChangeAssignee(array('project_id' => $project['id'])),
+            /* Whether the Owner cell is a picker or just a name. Reassigning
+               is management's, and so is setting a priority; the status of a
+               task is its assignee's and is therefore decided per row, below.
+               All three are checked again on the save - this only decides
+               what the grid offers. */
+            'can_assign' => $this->helper->authority->isManager($project['id']),
         );
 
         /* The Owner picker's list. "Unassigned" is first because taking a
@@ -128,8 +128,9 @@ class TaskGridController extends BaseController
         list($params['priority_options'], $params['priority_classes']) =
             $this->buildPriorityChoices($project);
 
-        /* Setting a priority is an ordinary task edit. */
-        $params['can_prioritise'] = $this->helper->user->hasProjectAccess('TaskModificationController', 'update', $project['id']);
+        /* A priority is a position in the project's queue, so setting one
+           is management's even on your own task. */
+        $params['can_prioritise'] = $this->helper->authority->isManager($project['id']);
 
         /* Subtasks use Kanboard's three states rather than the project's
            columns, so the pill in a subtask row is fed from this list. */

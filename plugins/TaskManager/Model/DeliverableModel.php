@@ -63,11 +63,16 @@ class DeliverableModel extends Base
         $url    = $this->normaliseUrl(isset($values['url']) ? $values['url'] : '');
         $fileId = isset($values['file_id']) ? (int) $values['file_id'] : 0;
 
-        /* Evidence is a link or a file, and one of the two has to be there.
-           A submission that is neither is a row saying "done" with nothing
-           behind it - which is the very thing the reviewer is being asked
-           to look at. */
-        if ($url === '' && $fileId <= 0) {
+        $note = isset($values['note']) ? trim($values['note']) : '';
+
+        /* A report is a file, a link, or a written summary - any one of the
+           three. A submission with none of them is a row saying "done" with
+           nothing behind it, which is the very thing the reviewer is being
+           asked to look at.
+
+           A title on its own does not count. It names something, and the
+           something is what is missing. */
+        if ($url === '' && $fileId <= 0 && $note === '') {
             return false;
         }
 
@@ -78,7 +83,7 @@ class DeliverableModel extends Base
             'title'          => isset($values['title']) ? trim($values['title']) : '',
             'url'            => $url,
             'file_id'        => $fileId,
-            'note'           => isset($values['note']) ? trim($values['note']) : '',
+            'note'           => $note,
             'status'         => self::STATUS_PENDING,
             'reviewer_id'    => 0,
             'review_note'    => '',
