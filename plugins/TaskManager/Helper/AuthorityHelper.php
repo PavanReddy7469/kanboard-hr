@@ -108,6 +108,22 @@ class AuthorityHelper extends Base
     }
 
     /**
+     * Whether this person is read-only on the project.
+     *
+     * Stated here because the status rule no longer leans on Kanboard's
+     * access map for its floor: the entries it used to borrow
+     * (BoardAjaxController::save, TaskStatusController) are PROJECT_MANAGER,
+     * which excluded the very people this screen is for.
+     *
+     * @param  integer $projectId
+     * @return boolean
+     */
+    public function isViewerOnly($projectId)
+    {
+        return $this->helper->projectRole->getProjectUserRole((int) $projectId) === Role::PROJECT_VIEWER;
+    }
+
+    /**
      * Reporting progress on a task.
      *
      * @param  array $task
@@ -115,6 +131,10 @@ class AuthorityHelper extends Base
      */
     public function canSetStatus(array $task)
     {
+        if ($this->isViewerOnly($task['project_id'])) {
+            return false;
+        }
+
         if (! $this->isManager($task['project_id']) && ! $this->ownsTask($task)) {
             return false;
         }
@@ -141,6 +161,10 @@ class AuthorityHelper extends Base
     {
         if ($this->isManager($task['project_id'])) {
             return true;
+        }
+
+        if ($this->isViewerOnly($task['project_id'])) {
+            return false;
         }
 
         /* A subtask's assignee is user_id on Kanboard's own records and

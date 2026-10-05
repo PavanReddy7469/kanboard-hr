@@ -214,7 +214,7 @@ $sortLink = function ($column, $label) use ($base, $order, $direction) {
                                     /* Per row, not per project: a status belongs to
                                        whoever the task is assigned to. The same check
                                        runs again on the save. */
-                                    'editable'       => $can_move && $this->authority->canSetStatus($row),
+                                    'editable'       => $this->authority->canSetStatus($row),
                                     'url_template'   => $this->url->href('StatusChangeController', 'task', array('plugin' => 'TaskManager', 'project_id' => $project['id'], 'task_id' => $row['id'])).'&column_id=%s&csrf_token=%s',
                                 )) ?>
                             </td>
@@ -279,7 +279,7 @@ $sortLink = function ($column, $label) use ($base, $order, $direction) {
                                         'current'        => $sub['status'],
                                         'current_label'  => $sub['status_label'],
                                         'current_class'  => $sub['status_class'],
-                                        'editable'       => $can_move && $this->authority->canSetSubtaskStatus($row, $sub),
+                                        'editable'       => $this->authority->canSetSubtaskStatus($row, $sub),
                                         'url_template'   => $this->url->href('StatusChangeController', 'subtask', array('plugin' => 'TaskManager', 'project_id' => $project['id'], 'task_id' => $row['id'], 'subtask_id' => $sub['id'])).'&status=%s&csrf_token=%s',
                                     )) ?>
                                 </td>

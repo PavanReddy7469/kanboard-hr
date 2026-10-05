@@ -47,8 +47,9 @@ class TaskPanelController extends BaseController
         $this->response->html($this->template->render('TaskManager:grid/panel', array(
             'columns'        => $columns,
             'column_classes' => $columnClasses,
-            'can_move'       => $this->helper->user->hasProjectAccess('BoardAjaxController', 'save', $task['project_id'])
-                && $this->helper->authority->canSetStatus($task),
+            /* The authority helper alone. The board's ACL entry is
+               PROJECT_MANAGER and says nothing about whose task this is. */
+            'can_move'       => $this->helper->authority->canSetStatus($task),
             'task'         => $task,
             'project'      => $project,
             'code'         => $this->gridModel->getTaskCode($task),

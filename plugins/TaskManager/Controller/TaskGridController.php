@@ -79,7 +79,13 @@ class TaskGridController extends BaseController
             'scales'     => $this->gridModel->getGanttScales(),
             'scale'      => $scale,
             'can_create' => $this->helper->user->hasProjectAccess('TaskCreationController', 'show', $project['id']),
-            'can_move'   => $this->helper->user->hasProjectAccess('BoardAjaxController', 'save', $project['id']),
+            /* Not hasProjectAccess('BoardAjaxController', 'save'): that entry
+               is PROJECT_MANAGER in the access map - it governs dragging a
+               card on the board - so gating the status pill on it meant the
+               moment somebody stopped being a project manager they could no
+               longer set the status of their own task. Whose task it is gets
+               decided per row, by the authority helper, below. */
+            'can_move'   => true,
 
             /* Whether the Owner cell is a picker or just a name. Reassigning
                is management's, and so is setting a priority; the status of a

@@ -44,8 +44,18 @@ class StatusChangeController extends BaseController
             throw new AccessForbiddenException(t("Only the person this task is assigned to can change its status."));
         }
 
-        if (! $this->helper->projectRole->canMoveTask($projectId, $task['column_id'], $columnId)
-            || ! $this->helper->projectRole->canChangeTaskStatusInColumn($projectId, $columnId)) {
+        /* canMoveTask only - deliberately not canChangeTaskStatusInColumn.
+           That one ends in hasProjectAccess('TaskStatusController', 'close'),
+           and TaskStatusController is PROJECT_MANAGER in the access map, so
+           it answers false for every member and every custom role. Requiring
+           it here would mean nobody but a manager could ever set a status,
+           which is the opposite of the rule this screen exists to enforce.
+
+           What it would have protected - a project blocking a particular
+           column for a role - is configured as a column restriction, and
+           canMoveTask reads those. Who may touch the task at all was settled
+           above. */
+        if (! $this->helper->projectRole->canMoveTask($projectId, $task['column_id'], $columnId)) {
             throw new AccessForbiddenException(t("You don't have the permission to move this task"));
         }
 
