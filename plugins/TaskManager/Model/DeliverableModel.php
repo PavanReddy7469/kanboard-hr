@@ -339,6 +339,7 @@ class DeliverableModel extends Base
             $rows[$index]['file_id']        = isset($row['file_id']) ? (int) $row['file_id'] : 0;
             $rows[$index]['file_name']      = '';
             $rows[$index]['file_size']      = 0;
+            $rows[$index]['file_is_image']  = 0;
         }
 
         $this->attachFiles($rows);
@@ -372,7 +373,7 @@ class DeliverableModel extends Base
 
         $files = $this->db
             ->table(TaskFileModel::TABLE)
-            ->columns('id', 'name', 'size')
+            ->columns('id', 'name', 'size', 'is_image')
             ->in('id', array_values($fileIds))
             ->findAll();
 
@@ -384,8 +385,11 @@ class DeliverableModel extends Base
 
         foreach ($rows as $index => $row) {
             if ($row['file_id'] > 0 && isset($byId[$row['file_id']])) {
-                $rows[$index]['file_name'] = $byId[$row['file_id']]['name'];
-                $rows[$index]['file_size'] = (int) $byId[$row['file_id']]['size'];
+                $rows[$index]['file_name']     = $byId[$row['file_id']]['name'];
+                $rows[$index]['file_size']     = (int) $byId[$row['file_id']]['size'];
+                /* file_viewer/show.php draws an <img> off this flag, so it
+                   decides whether a preview is possible at all. */
+                $rows[$index]['file_is_image'] = (int) $byId[$row['file_id']]['is_image'];
             }
         }
     }

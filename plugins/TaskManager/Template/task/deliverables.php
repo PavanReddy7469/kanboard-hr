@@ -36,16 +36,26 @@ $class    = array('pending' => 'is-pending', 'approved' => 'is-approved', 'rejec
                 <li class="<?= $class[$row['status']] ?>">
                     <div class="sb-deliv-main">
                         <?php if ($row['file_id'] > 0): ?>
-                            <a class="sb-deliv-link" href="<?= $this->url->href('FileViewerController', 'show', array('file_id' => $row['file_id'], 'project_id' => $task['project_id'])) ?>" title="<?= t('Open the attached report') ?>">
-                                <i class="fa fa-paperclip" style="color: #6366f1;"></i>
-                                <strong>
-                                    <?php if ($row['file_name'] !== ''): ?>
-                                        <?= $this->text->e($row['title'] !== '' ? $row['title'] : $row['file_name']) ?>
-                                    <?php else: ?>
-                                        <em style="color: #b45309; font-style: normal;"><?= t('Attached file is no longer on disk') ?></em>
-                                    <?php endif ?>
-                                </strong>
-                            </a>
+                            <?php
+                                /* task_id, not project_id: getFile() reads the table to
+                                   search off the URL, and without a task_id it looks for
+                                   a task attachment among the project documents. */
+                                $fileAction = $this->filePreview->action($row['file_name'], $row['file_is_image']);
+                            ?>
+                            <?php if ($fileAction === ''): ?>
+                                <span class="sb-deliv-link is-gone" title="<?= t('The attachment was removed after this report was submitted') ?>">
+                                    <i class="fa fa-unlink"></i>
+                                    <strong><em><?= t('Attached file is no longer on disk') ?></em></strong>
+                                </span>
+                            <?php else: ?>
+                                <a class="sb-deliv-link<?= $this->filePreview->isModal($fileAction) ? ' js-modal-large' : '' ?>"
+                                   href="<?= $this->url->href('FileViewerController', $fileAction, array('file_id' => $row['file_id'], 'task_id' => $task['id'])) ?>"
+                                   <?= $this->filePreview->isNewTab($fileAction) ? 'target="_blank" rel="noopener noreferrer"' : '' ?>
+                                   title="<?= $fileAction === 'download' ? t('Download the attached report') : t('Open the attached report') ?>">
+                                    <i class="fa <?= $this->file->icon($row['file_name']) ?>" style="color: #6366f1;"></i>
+                                    <strong><?= $this->text->e($row['title'] !== '' ? $row['title'] : $row['file_name']) ?></strong>
+                                </a>
+                            <?php endif ?>
                         <?php else: ?>
                         <a class="sb-deliv-link" href="<?= $this->text->e($deliverableUrl) ?>" target="_blank" rel="noopener noreferrer nofollow" title="<?= t('Open submitted document') ?>">
                             <?php if ($isGoogleDrive): ?>

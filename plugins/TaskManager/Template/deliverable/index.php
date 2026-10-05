@@ -88,23 +88,36 @@ $statusClass = array(
                                              a reviewer deciding whether to open a 60MB drawing on a
                                              phone deserves to know that first. */ ?>
                                     <?php if ($row['file_id'] > 0): ?>
-                                        <a class="sb-deliv-link"
-                                           href="<?= $this->url->href('FileViewerController', 'show', array('file_id' => $row['file_id'], 'project_id' => $project['id'])) ?>"
-                                           title="<?= t('Open the attached report') ?>">
-                                            <i class="fa fa-paperclip" style="color: #6366f1;" aria-hidden="true"></i>
-                                            <span>
-                                                <?php if ($row['file_name'] !== ''): ?>
-                                                    <?= $this->text->e($row['title'] !== '' ? $row['title'] : $row['file_name']) ?>
+                                        <?php
+                                            /* 'show' only knows how to draw an image, markdown or
+                                               plain text; a PDF streams in its own tab and a .docx
+                                               can only be handed over. An empty action means the
+                                               attachment is gone, and then this must not be a link
+                                               at all - FileViewerController would 404 on it. */
+                                            $fileAction = $this->filePreview->action($row['file_name'], $row['file_is_image']);
+                                            $fileLabel  = $row['title'] !== '' ? $row['title'] : $row['file_name'];
+                                        ?>
+                                        <?php if ($fileAction === ''): ?>
+                                            <?php /* The row outlives its attachment: the submission is
+                                                     still a record of what was claimed and when. */ ?>
+                                            <span class="sb-deliv-link is-gone" title="<?= t('The attachment was removed after this report was submitted') ?>">
+                                                <i class="fa fa-unlink" aria-hidden="true"></i>
+                                                <span><em><?= t('Attached file is no longer on disk') ?></em></span>
+                                            </span>
+                                        <?php else: ?>
+                                            <a class="sb-deliv-link<?= $this->filePreview->isModal($fileAction) ? ' js-modal-large' : '' ?>"
+                                               href="<?= $this->url->href('FileViewerController', $fileAction, array('file_id' => $row['file_id'], 'task_id' => $row['task_id'])) ?>"
+                                               <?= $this->filePreview->isNewTab($fileAction) ? 'target="_blank" rel="noopener noreferrer"' : '' ?>
+                                               title="<?= $fileAction === 'download' ? t('Download the attached report') : t('Open the attached report') ?>">
+                                                <i class="fa <?= $this->file->icon($row['file_name']) ?>" style="color: #6366f1;" aria-hidden="true"></i>
+                                                <span>
+                                                    <?= $this->text->e($fileLabel) ?>
                                                     <?php if ($row['file_size'] > 0): ?>
                                                         <em style="color: #94a3b8; font-style: normal;">(<?= $this->text->bytes($row['file_size']) ?>)</em>
                                                     <?php endif ?>
-                                                <?php else: ?>
-                                                    <?php /* The row outlives its attachment: the submission is
-                                                             still a record of what was claimed and when. */ ?>
-                                                    <em style="color: #b45309; font-style: normal;"><?= t('Attached file is no longer on disk') ?></em>
-                                                <?php endif ?>
-                                            </span>
-                                        </a>
+                                                </span>
+                                            </a>
+                                        <?php endif ?>
                                     <?php else: ?>
                                         <a class="sb-deliv-link" href="<?= $this->text->e($row['url']) ?>" target="_blank" rel="noopener noreferrer nofollow" title="<?= t('Open submitted live document') ?>">
                                             <?php if ($isGoogleDrive): ?>

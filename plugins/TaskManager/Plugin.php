@@ -44,6 +44,12 @@ class Plugin extends Base
            role, and a custom role is stored under its own name. */
         $this->helper->register('authority', '\Kanboard\Plugin\TaskManager\Helper\AuthorityHelper');
 
+        /* Which FileViewerController action can actually display a file.
+           Every attachment link in this plugin used to point at 'show' with
+           only a project_id, which made getFile() search project_has_files
+           for a task attachment and 404. */
+        $this->helper->register('filePreview', '\Kanboard\Plugin\TaskManager\Helper\FilePreviewHelper');
+
         /* Replaces core's 'user' helper so a person reads as "NAME (EMP ID)".
            UserModel::prepareList() builds every user dropdown through
            getFullname(), so overriding here reaches task owner, assignee,

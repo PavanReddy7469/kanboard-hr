@@ -508,6 +508,32 @@ html body a.sb-deliv-link {
 
 html body a.sb-deliv-link:hover { color: var(--sb-navy); text-decoration: underline; }
 
+/* The modal opener matches on the clicked element itself.
+   KB.onClick stores a selector and tests e.target.matches(selector) with no
+   closest() walk, so a click that lands on the <i> or the <span> inside the
+   link finds no listener and the browser follows the href instead - which
+   serves file_viewer/show as a bare unstyled fragment. Core gets away with
+   nested markup by putting the class on the icon as well; taking the inner
+   elements out of hit-testing makes the <a> the target wherever you click,
+   and does not stop the link working if the JS never loads. */
+html body a.js-modal-large > * { pointer-events: none; }
+
+/* A submission whose attachment has since been deleted. Not a link: the row
+   is still the record of what was claimed, but there is nothing to open and
+   FileViewerController would answer a 404. */
+html body span.sb-deliv-link.is-gone {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #b45309;
+    cursor: not-allowed;
+}
+
+html body span.sb-deliv-link.is-gone em { font-style: normal; }
+
 .sb-deliv-meta {
     display: block;
     margin-top: 3px;

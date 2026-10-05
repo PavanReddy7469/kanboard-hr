@@ -91,7 +91,10 @@
             <?php foreach ($files as $file): ?>
                 <li>
                     <div class="zp-list-head">
-                        <a href="<?= $this->url->href('FileViewerController', 'show', array('file_id' => $file['id'], 'project_id' => $task['project_id'])) ?>">
+                        <?php $fileAction = $this->filePreview->action($file['name'], $file['is_image']); ?>
+                        <a class="<?= $this->filePreview->isModal($fileAction) ? 'js-modal-large' : '' ?>"
+                           href="<?= $this->url->href('FileViewerController', $fileAction, array('file_id' => $file['id'], 'task_id' => $task['id'])) ?>"
+                           <?= $this->filePreview->isNewTab($fileAction) ? 'target="_blank" rel="noopener noreferrer"' : '' ?>>
                             <?= $this->text->e($file['name']) ?>
                         </a>
                         <span><?= $this->dt->date($file['date']) ?></span>
