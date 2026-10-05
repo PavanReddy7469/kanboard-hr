@@ -3,7 +3,7 @@
 </div>
 
 <p class="alert alert-info" style="border-radius: 8px; font-size: 0.88rem; line-height: 1.5;">
-    <i class="fa fa-info-circle"></i> <?= t('Attach the document itself, or paste a link to where it lives - a Drive file, a Figma design, a repository, a live demo. An administrator verifies it before the task is marked completed.') ?>
+    <i class="fa fa-info-circle"></i> <?= t('Attach the document itself, paste a link to where it lives - a Drive file, a Figma design, a repository, a live demo - or just write what was delivered. Any one of the three is enough. A manager verifies it before the task is marked completed.') ?>
 </p>
 
 <?php /* multipart, or the browser posts the filename as ordinary text and
