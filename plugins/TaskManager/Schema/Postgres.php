@@ -4,7 +4,7 @@ namespace Kanboard\Plugin\TaskManager\Schema;
 
 use PDO;
 
-const VERSION = 12;
+const VERSION = 13;
 
 function version_1(PDO $pdo)
 {
@@ -261,6 +261,70 @@ function version_12(PDO $pdo)
         AND NOT EXISTS (
             SELECT 1 FROM project_role_has_restrictions x
             WHERE x.role_id = r.role_id AND x.rule = 'task_change_assignee'
+        )
+    ");
+}
+
+
+function version_13(PDO $pdo)
+{
+    /* Bookkeeping for the daily reminder run.
+     *
+     * Cron gets run twice. Somebody re-runs it by hand after a failure, a
+     * second crontab entry nobody remembers about fires, the clock goes
+     * back an hour and 01:30 happens twice. Without a record of what has
+     * already gone out, each of those sends every person a duplicate, and
+     * duplicates are how a notification address gets filtered to trash.
+     *
+     * sent_on is the calendar day as 'Y-m-d' rather than a timestamp: the
+     * question being asked is "today?", and a timestamp would make that a
+     * range comparison for no benefit. task_id doubles as a project id for
+     * the project_end kind - the pair (kind, id) is what is unique, and a
+     * second column that is null for three of the four kinds would be
+     * worse.
+     *
+     * The UNIQUE index is the real guard. The code checks before sending,
+     * but two runs started in the same second would both pass that check,
+     * and only the index stops the second one writing.
+     */
+    $pdo->exec("
+        CREATE TABLE taskmanager_reminders_sent (
+            id SERIAL PRIMARY KEY,
+            task_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            kind VARCHAR(20) NOT NULL,
+            sent_on VARCHAR(10) NOT NULL,
+            date_creation INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(task_id, user_id, kind, sent_on)
+        )
+    ");
+
+    $pdo->exec("CREATE INDEX taskmanager_reminders_sent_on_idx ON taskmanager_reminders_sent(sent_on)");
+
+    /* Everyone who already has an account is opted in.
+     *
+     * Kanboard defaults users.notifications_enabled to 0, so configuring
+     * SMTP on its own changes nothing: every mail is composed, addressed
+     * and then dropped, with no error to explain why nobody received it.
+     *
+     * The second statement is the half that is easy to miss.
+     * UserNotificationModel asks getSelectedTypes(), which reads
+     * user_has_notification_types and filters it against the registered
+     * classes. A user with the switch on but no row there has no selected
+     * type, so the delivery loop runs zero times and the mail is silently
+     * dropped exactly as before. Both are required.
+     *
+     * Nobody is opted out by this - only 0 is touched - and the profile
+     * checkbox keeps working, so anyone who wants it off can turn it off.
+     */
+    $pdo->exec("UPDATE users SET notifications_enabled = 1 WHERE notifications_enabled = 0");
+
+    $pdo->exec("
+        INSERT INTO user_has_notification_types (user_id, notification_type)
+        SELECT u.id, 'email' FROM users u
+        WHERE NOT EXISTS (
+            SELECT 1 FROM user_has_notification_types t
+            WHERE t.user_id = u.id AND t.notification_type = 'email'
         )
     ");
 }

@@ -50,6 +50,15 @@ class Plugin extends Base
            for a task attachment and 404. */
         $this->helper->register('filePreview', '\Kanboard\Plugin\TaskManager\Helper\FilePreviewHelper');
 
+        /* The daily reminder job.
+           Guarded on the SAPI because $this->container['cli'] is a Pimple
+           factory that builds the whole Symfony Console application the
+           moment it is touched - registering twenty-odd commands on every
+           web request to support one that only ever runs from cron. */
+        if (PHP_SAPI === 'cli') {
+            $this->container['cli']->add(new \Kanboard\Plugin\TaskManager\Console\SendRemindersCommand($this->container));
+        }
+
         /* Replaces core's 'user' helper so a person reads as "NAME (EMP ID)".
            UserModel::prepareList() builds every user dropdown through
            getFullname(), so overriding here reaches task owner, assignee,
@@ -168,7 +177,7 @@ class Plugin extends Base
                fires no event, so it is the only way to close the hole a
                delete leaves in the priority queue. PriorityModel holds that
                renumbering, shared with the automatic action. */
-            'Plugin\TaskManager\Model' => array('ProjectModel', 'UserModel', 'TaskModel', 'PriorityModel', 'TaskDuplicationModel', 'TaskStatusModel', 'TaskCreationModel', 'TaskModificationModel', 'TaskPositionModel', 'SubtaskModel', 'MilestoneModel', 'TaskListModel', 'DependencyModel', 'TimesheetModel', 'TimeEntryModel', 'RoleSeedModel', 'DashboardModel', 'GridModel', 'DeliverableModel'),
+            'Plugin\TaskManager\Model' => array('ProjectModel', 'UserModel', 'TaskModel', 'PriorityModel', 'TaskDuplicationModel', 'TaskStatusModel', 'TaskCreationModel', 'TaskModificationModel', 'TaskPositionModel', 'SubtaskModel', 'MilestoneModel', 'TaskListModel', 'DependencyModel', 'TimesheetModel', 'TimeEntryModel', 'RoleSeedModel', 'DashboardModel', 'GridModel', 'DeliverableModel', 'ReminderModel', 'MailerModel'),
         );
     }
 
