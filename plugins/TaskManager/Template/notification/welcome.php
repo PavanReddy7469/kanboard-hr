@@ -43,4 +43,10 @@ ob_start();
 <?php endif ?>
 <?php
 $content = ob_get_clean();
-echo $this->render('TaskManager:notification/_shell', array('content' => $content));
+echo $this->render('TaskManager:notification/_shell', array(
+    'content' => $content,
+    'reason'  => t('You are receiving this because an account was created for you.'),
+    /* Transactional: it is sent whether or not notifications are on,
+       so it must not claim they can be used to stop it. */
+    'optout'  => false,
+));

@@ -25,4 +25,7 @@ ob_start();
 <?php endif ?>
 <?php
 $content = ob_get_clean();
-echo $this->render('TaskManager:notification/_shell', array('content' => $content));
+echo $this->render('TaskManager:notification/_shell', array(
+    'content' => $content,
+    'reason'  => t('You are receiving this because you manage this project.'),
+));
