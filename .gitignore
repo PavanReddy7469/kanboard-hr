@@ -12,7 +12,15 @@ config.php.sqlite-backup
 
 # Live data: the SQLite database, its WAL/SHM sidecars, uploaded
 # files, cache and every ad-hoc backup taken during development.
-data/
+#
+# Anchored with a leading slash. Written as a bare "data/" it matched ANY
+# directory called data at any depth, and quietly swallowed
+# vendor/symfony/string/Resources/data/ - two Unicode width tables that
+# Symfony's console Table helper require()s at render time. They sat on
+# the developer's disk looking present and never reached the server, so
+# the first command to draw a table died with "No such file or directory"
+# on a file nobody had knowingly excluded.
+/data/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm

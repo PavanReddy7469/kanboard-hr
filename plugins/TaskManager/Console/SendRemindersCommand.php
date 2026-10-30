@@ -5,7 +5,6 @@ namespace Kanboard\Plugin\TaskManager\Console;
 use Kanboard\Console\BaseCommand;
 use Kanboard\Plugin\TaskManager\Model\ReminderModel;
 use Kanboard\Core\Security\Role;
-use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -208,6 +207,29 @@ class SendRemindersCommand extends BaseCommand
         return array_values(array_filter($managers));
     }
 
+    /**
+     * Print the selection as a plain aligned table.
+     *
+     * Deliberately not Symfony's Table helper, which this used at first.
+     * Table::render() measures every cell through Helper::width(), which
+     * goes to AbstractUnicodeString::wcswidth() and require()s
+     * symfony/string/Resources/data/wcswidth_table_zero.php - a Unicode
+     * width table that is not in this repository and therefore not on the
+     * server. The command died on it the first time a row was actually
+     * selected, which is the worst possible moment: it worked perfectly
+     * while there was nothing to show.
+     *
+     * Six columns of a diagnostic table do not need a Unicode width table.
+     * Width is counted in codepoints with mb_strlen, which is right for
+     * Latin, accented and most text.
+     *
+     * It is NOT right for everything, and the difference is worth stating:
+     * a combining mark (Devanagari, Thai, Arabic) occupies a codepoint but
+     * no column, and a CJK ideograph occupies one codepoint but two
+     * columns. A title in those scripts will leave its row a character or
+     * two out of alignment with the rest. That is the whole cost of the
+     * trade, and it buys a command that cannot die on a missing file.
+     */
     protected function showTable(OutputInterface $output, array $rows, $today, $dryRun)
     {
         $output->writeln(sprintf('<info>%s for %s</info>', $dryRun ? 'Dry run' : 'Reminder run', $today));
@@ -217,9 +239,88 @@ class SendRemindersCommand extends BaseCommand
             return;
         }
 
-        $table = new Table($output);
-        $table->setHeaders(array('Id', 'Title', 'Reminder', 'Project / date', 'Recipient', 'Sent'))
-              ->setRows($rows)
-              ->render();
+        $headers = array('Id', 'Title', 'Reminder', 'Project / date', 'Recipient', 'Sent');
+        $widths  = self::columnWidths($headers, $rows);
+        $rule    = self::rule($widths);
+
+        $output->writeln($rule);
+        $output->writeln(self::formatRow($headers, $widths));
+        $output->writeln($rule);
+
+        foreach ($rows as $row) {
+            $output->writeln(self::formatRow(array_values($row), $widths));
+        }
+
+        $output->writeln($rule);
+        $output->writeln(sprintf('%d reminder(s).', count($rows)));
+    }
+
+    /**
+     * The widest cell in each column, headers included.
+     *
+     * @param  array $headers
+     * @param  array $rows
+     * @return array
+     */
+    public static function columnWidths(array $headers, array $rows)
+    {
+        $widths = array();
+
+        foreach (array_merge(array($headers), $rows) as $row) {
+            foreach (array_values($row) as $i => $cell) {
+                $length = self::displayWidth($cell);
+
+                if (! isset($widths[$i]) || $length > $widths[$i]) {
+                    $widths[$i] = $length;
+                }
+            }
+        }
+
+        return $widths;
+    }
+
+    /**
+     * @param  array $cells
+     * @param  array $widths
+     * @return string
+     */
+    public static function formatRow(array $cells, array $widths)
+    {
+        $out = '';
+
+        foreach ($widths as $i => $width) {
+            $cell = isset($cells[$i]) ? (string) $cells[$i] : '';
+            /* max() because a row longer than the header set would
+               otherwise ask for a negative amount of padding. */
+            $out .= '| '.$cell.str_repeat(' ', max(0, $width - self::displayWidth($cell))).' ';
+        }
+
+        return $out.'|';
+    }
+
+    /**
+     * @param  array $widths
+     * @return string
+     */
+    public static function rule(array $widths)
+    {
+        $out = '';
+
+        foreach ($widths as $width) {
+            $out .= '+'.str_repeat('-', $width + 2);
+        }
+
+        return $out.'+';
+    }
+
+    /**
+     * @param  mixed $value
+     * @return integer
+     */
+    public static function displayWidth($value)
+    {
+        $value = (string) $value;
+
+        return function_exists('mb_strlen') ? mb_strlen($value, 'UTF-8') : strlen($value);
     }
 }
