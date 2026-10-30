@@ -110,8 +110,15 @@ crontab -e
 ```
 
 ```cron
-30 8 * * *  /var/www/<web-root>/ops/send-reminders.sh
+30 8 * * *  sh /var/www/kanboard-hr/ops/send-reminders.sh
 ```
+
+**`sh`, not the path on its own.** The deploy's permissions pass runs
+`chmod 640` over every file in the tree, so nothing in `ops/` keeps its
+executable bit and calling the script directly fails with `Permission
+denied` — silently, because cron mails the error to a local mailbox nobody
+reads. The workflow invokes `ops/set-php-limits.sh` the same way, for the
+same reason.
 
 `ops/send-reminders.sh` runs Kanboard's own `cronjob` (overdue
 notifications, project stats, automatic actions) and then this fork's
@@ -127,7 +134,7 @@ scheduled on the hour, and mail queued at 09:00 arrives late.
 **See what would be sent, without sending anything:**
 
 ```sh
-cd /var/www/<web-root>
+cd /var/www/kanboard-hr
 php ./cli taskmanager:reminders --dry-run
 ```
 
