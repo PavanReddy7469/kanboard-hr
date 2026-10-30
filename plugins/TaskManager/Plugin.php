@@ -50,6 +50,23 @@ class Plugin extends Base
            for a task attachment and 404. */
         $this->helper->register('filePreview', '\Kanboard\Plugin\TaskManager\Helper\FilePreviewHelper');
 
+        /* Every notification email, in the SUPERBEE frame.
+           Core has 23 standalone notification templates; overriding this
+           one class restyles all of them, with no files to re-merge on a
+           Kanboard upgrade.
+
+           Registered by calling setType() again rather than through
+           getClasses(). The usual mechanism registers a container key named
+           after the class, and NotificationTypeModel never reads one:
+           setType() closes over the class-name STRING it was given and
+           stores a factory in its own private Pimple. So the only way to
+           substitute the class is to hand setType() a different name. */
+        $this->container['userNotificationTypeModel']->setType(
+            \Kanboard\Notification\MailNotification::TYPE,
+            t('Email'),
+            '\Kanboard\Plugin\TaskManager\Notification\MailNotification'
+        );
+
         /* The daily reminder job.
            Guarded on the SAPI because $this->container['cli'] is a Pimple
            factory that builds the whole Symfony Console application the

@@ -68,6 +68,57 @@ class TaskModificationModel extends \Kanboard\Model\TaskModificationModel
     }
 
     /**
+     * Fire the update events, carrying the values the task had BEFORE.
+     *
+     * Core loses them. TaskEventBuilder::buildEvent() re-reads the task
+     * fresh, diffs the posted values against the old row to work out which
+     * fields moved, and then drops the old row on the floor:
+     *
+     *     $eventData['task']    = getDetails($taskId);            // after
+     *     $eventData['changes'] = array_diff_assoc($changes, $old);  // after
+     *
+     * So a notification can say "New due date: 2 Nov" but never "moved from
+     * 28 Oct to 2 Nov", which is the half a reader actually needs - a date
+     * on its own does not say whether it slipped or was brought forward.
+     *
+     * The builder cannot be overridden: TaskEventJob calls
+     * TaskEventBuilder::getInstance() statically against a hardcoded class
+     * name. But buildEvent() ends with array_merge($eventData, $this->values),
+     * so anything handed to withValues() lands in the event data untouched -
+     * and withValues() is the fourth argument here. That is the seam.
+     *
+     * Narrowed with array_intersect_key so only fields that were actually
+     * submitted carry a previous value; the template looks each one up by
+     * the key it is already iterating.
+     *
+     * @param  array $task     the row as it was before the update
+     * @param  array $changes  the submitted values
+     */
+    protected function fireEvents(array $task, array $changes)
+    {
+        $events = array();
+
+        if ($this->isAssigneeChanged($task, $changes)) {
+            $events[] = TaskModel::EVENT_ASSIGNEE_CHANGE;
+        } elseif ($this->isModified($task, $changes)) {
+            $events[] = TaskModel::EVENT_CREATE_UPDATE;
+            $events[] = TaskModel::EVENT_UPDATE;
+        }
+
+        if (! empty($events)) {
+            $this->queueManager->push(
+                $this->taskEventJob->withParams(
+                    $task['id'],
+                    $events,
+                    $changes,
+                    array('previous' => array_intersect_key($task, $changes)),
+                    $task
+                )
+            );
+        }
+    }
+
+    /**
      * Remove the fields this person is not allowed to set.
      *
      * Only a value that would actually CHANGE is dropped: a form posts every
