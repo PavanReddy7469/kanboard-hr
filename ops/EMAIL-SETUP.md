@@ -68,6 +68,23 @@ Notes on the three that matter:
 `config.php` is gitignored and lives only on the server, so a deploy will
 not overwrite this.
 
+### The UI can silently override two of these
+
+**Settings → Email settings** has its own *Email sender address* and *Email
+transport* fields. They are stored in the database, and
+`MailHelper::getMailSenderAddress()` and `getMailTransport()` both read the
+stored value first and only fall back to the constant above when it is
+empty.
+
+So anything typed on that page wins over `config.php`, with no indication
+on either screen that the other exists. Leave both fields **blank** and
+keep `config.php` as the single source of truth. If mail one day starts
+coming from the wrong address and the file looks right, that page is the
+first place to look.
+
+The SMTP hostname, port, encryption and HELO name have no UI equivalent -
+they are only ever read from `config.php`.
+
 ---
 
 ## 3. Set the portal address — do not skip this
@@ -88,7 +105,16 @@ links when it is empty; this fork's templates say so in the body instead,
 so if a test email arrives telling you to set the Application URL, this is
 the step that was missed.
 
-While you are on that screen, set **Timezone** to `Asia/Kolkata`. The
+While you are on that screen, set **Timezone** to `Asia/Kolkata`. It
+starts as `UTC`, which is 5 hours 30 minutes behind you - so "due today"
+would be decided against the wrong day for anything due after 18:30 local,
+and the 08:30 cron would run at 14:00 IST.
+
+Ignore **"Enable notifications by default for all new users"** on that
+page. It does the same job as the plugin, but only for accounts made
+through the Users screen; the plugin's `UserModel::create()` override
+covers the API, invitations and imports as well. Ticking it additionally
+switches on in-app web notifications, which is a preference, not a fix. The
 reminders decide "is this due today" in the server's timezone, so a server
 left on UTC will tell people a task is due today at 05:30 their time, and
 on the wrong day for anything due late in the evening.

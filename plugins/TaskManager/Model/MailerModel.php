@@ -34,11 +34,28 @@ use Kanboard\Model\UserNotificationTypeModel;
 class MailerModel extends Base
 {
     /**
-     * Who the mail is from. The display name only - the address is
-     * MAIL_FROM, which on a Google Workspace relay must be an address on
-     * the domain or the relay refuses the message.
+     * The display name beside the From address.
+     *
+     * The address itself is never chosen here. Mail::sendEmail() always
+     * calls setFrom(helper->mail->getMailSenderAddress(), $authorName), and
+     * that helper reads the stored mail_sender_address setting first and
+     * only falls back to the constant in config.php. So Settings > Email is
+     * the single place the sender is decided, and this is just the name
+     * people see beside it.
      */
     const AUTHOR_NAME = 'Superbee PMO';
+
+    /**
+     * No Reply-To header.
+     *
+     * The sixth argument to emailClient->send() is not the sender - it
+     * becomes Reply-To. This used to pass the config.php sender constant
+     * there, which put a dead address on every message as soon as the real
+     * sender was set in the UI: anyone hitting Reply got a bounce. Nothing
+     * is the right answer. These come from a no-reply address and there is
+     * nobody at the other end.
+     */
+    const NO_REPLY_TO = '';
 
     /**
      * The subject line for a task reminder.
@@ -134,7 +151,7 @@ class MailerModel extends Base
                 'user' => $user,
             )),
             self::AUTHOR_NAME,
-            MAIL_FROM
+            self::NO_REPLY_TO
         );
 
         return true;
@@ -166,7 +183,7 @@ class MailerModel extends Base
                 'user'    => $user,
             )),
             self::AUTHOR_NAME,
-            MAIL_FROM
+            self::NO_REPLY_TO
         );
 
         return true;
@@ -203,7 +220,7 @@ class MailerModel extends Base
                 'user' => $user,
             )),
             self::AUTHOR_NAME,
-            MAIL_FROM
+            self::NO_REPLY_TO
         );
 
         return true;
