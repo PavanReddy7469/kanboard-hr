@@ -114,6 +114,16 @@ class MailerModel extends Base
             return false;
         }
 
+        /* Checked only when the caller supplied it. The task-reminder query
+           filters disabled accounts out in SQL, but sendProjectEnding() is
+           handed whole user rows read by id, and a disabled manager should
+           not be told a project is ending either. Absence is not treated as
+           inactive here, because the rows that lack the column have already
+           been filtered. */
+        if (array_key_exists('is_active', $user) && (int) $user['is_active'] !== 1) {
+            return false;
+        }
+
         return (int) $user['notifications_enabled'] === 1;
     }
 

@@ -171,6 +171,50 @@
                                         <?= $this->url->link('<i class="fa fa-dashboard fa-fw"></i> '.t('User Dashboard'), 'DashboardController', 'show', array('user_id' => $u['id'])) ?>
                                     </li>
                                 <?php endif ?>
+
+                                <?php
+                                    /* Restored from core's user_list/dropdown.php, which this
+                                       template replaced while keeping five of its sixteen
+                                       actions. Until now there was no way to stop somebody
+                                       signing in: the only remedy for a departing employee
+                                       was to change their password and hope.
+
+                                       Disable is listed first and is the one to reach for.
+                                       It blocks login and keeps everything else, so their
+                                       name stays on the tasks they finished and the comments
+                                       they wrote.
+
+                                       Remove is not an archive. UserModel::remove() unassigns
+                                       every task and subtask they hold, strips their name off
+                                       every comment they ever wrote, and deletes their private
+                                       projects outright. It is offered because an account
+                                       created by mistake should be deletable, not because it
+                                       is the normal way to off-board somebody.
+
+                                       Both guards are core's own: the ACL check, and never
+                                       offering either action on your own account - an
+                                       administrator who disables themselves has locked the
+                                       last administrator out of the installation. */
+                                    $isSelf = $this->user->isCurrentUser($u['id']);
+                                ?>
+
+                                <?php if (! $isSelf && $isActive && $this->user->hasAccess('UserStatusController', 'disable')): ?>
+                                    <li style="border-top: 1px solid #f1f5f9; margin-top: 4px; padding-top: 4px;">
+                                        <?= $this->modal->confirm('ban', t('Disable Login'), 'UserStatusController', 'confirmDisable', array('user_id' => $u['id'])) ?>
+                                    </li>
+                                <?php endif ?>
+
+                                <?php if (! $isSelf && ! $isActive && $this->user->hasAccess('UserStatusController', 'enable')): ?>
+                                    <li style="border-top: 1px solid #f1f5f9; margin-top: 4px; padding-top: 4px;">
+                                        <?= $this->modal->confirm('check-square-o', t('Enable Login'), 'UserStatusController', 'confirmEnable', array('user_id' => $u['id'])) ?>
+                                    </li>
+                                <?php endif ?>
+
+                                <?php if (! $isSelf && $this->user->hasAccess('UserStatusController', 'remove')): ?>
+                                    <li class="zp-danger-item">
+                                        <?= $this->modal->confirm('trash-o', t('Delete Account'), 'UserStatusController', 'confirmRemove', array('user_id' => $u['id'])) ?>
+                                    </li>
+                                <?php endif ?>
                             </ul>
                         </div>
                     </div>

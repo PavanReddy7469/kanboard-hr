@@ -170,6 +170,12 @@ class ReminderModel extends Base
             ->join(UserModel::TABLE, 'id', 'owner_id')
             ->eq(ProjectModel::TABLE.'.is_active', 1)
             ->eq(TaskModel::TABLE.'.is_active', 1)
+            /* A disabled account is somebody who has left or been locked
+               out. Their tasks usually stay assigned to them so the history
+               reads correctly, which means without this they keep getting a
+               reminder every morning about work they can no longer sign in
+               to do. Core's overdue job has the same hole. */
+            ->eq(UserModel::TABLE.'.is_active', 1)
             ->gt(TaskModel::TABLE.'.owner_id', 0)
             ->beginOr()
             ->neq(TaskModel::TABLE.'.date_due', 0)
